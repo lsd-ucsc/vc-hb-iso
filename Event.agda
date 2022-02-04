@@ -55,7 +55,7 @@ data _≡ᵉ_ : Event pid eid → Event pid′ eid′ → Set where
 sym : e ≡ᵉ e′ → e′ ≡ᵉ e
 sym refl = refl
 
-subst : (P : Event pid eid → Set) → e ≡ᵉ e′ → P e → P e′
+subst : (P : ∀ {pid} {eid} → Event pid eid → Set) → e ≡ᵉ e′ → P e → P e′
 subst _ refl Pe = Pe
 
 ------------------------------------------------------------------------
