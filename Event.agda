@@ -11,6 +11,7 @@ open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Fin using (Fin; zero)
 open import Data.Maybe using (Maybe)
 open import Data.Nat.Properties as ℕₚ
+open import Data.Sum using (_⊎_)
 open import Function using (_∘′_; _$′_)
 open import Relation.Binary using (Tri; tri<; tri≈; tri>)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl)
@@ -93,6 +94,7 @@ size (recv e e′) = suc (size e + size e′)
 
 postulate
   uniquely-identify : ∀ (e e′ : Event pid eid) → e ≡ᵉ e′
+  ⊏-dec : ∀ (e : Event pid eid) (e′ : Event pid′ eid′) → e ⊏ e′ ⊎ ¬ e ⊏ e′
 
 uniquely-identify′ : ∀ (e : Event pid eid) (e′ : Event pid eid′) →
                      eid ≡ eid′ → e ≡ᵉ e′
