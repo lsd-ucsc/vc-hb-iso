@@ -77,7 +77,7 @@ record IsComplete (vcᵃ : VCᵃ) : Set where
         pid ≢ pid′ → vc[ e ] ≺ vc[ e′ ] → e ⊏ e′
   completeness₂ {e = e} {e′ = init}       x y = ⊥-elim (rule₂ x y)
   completeness₂ {e = e} {e′ = send m e′}  x y = trans (completeness₂ x (rule₃ x y)) processOrder₁
-  completeness₂ {e = e} {e′ = recv e″ e′} x y with ⊏-dec e e″
+  completeness₂ {e = e} {e′ = recv e″ e′} x y with ⊏-dec {e = e} {e′ = e″}
   ... | inj₁ z = trans z send⊏recv
   ... | inj₂ z = trans (completeness₂ x (rule₄ x z y)) processOrder₂
 

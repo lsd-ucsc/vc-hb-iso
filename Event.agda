@@ -8,16 +8,16 @@ open import Data.Nat as ℕ
 module Event (n : ℕ) (Message : Set) where
 
 open import Data.Empty using (⊥; ⊥-elim)
-open import Data.Fin using (Fin; zero)
+open import Data.Fin as Fin using (Fin; zero)
 open import Data.Maybe using (Maybe)
 open import Data.Nat.Properties as ℕₚ
-open import Data.Sum using (_⊎_)
+open import Data.Sum using (_⊎_; inj₁; inj₂; [_,_]′)
 open import Function using (_∘′_; _$′_)
 open import Relation.Binary using (Tri; tri<; tri≈; tri>)
-open import Relation.Binary.PropositionalEquality using (_≡_; refl)
-open import Relation.Nullary using (¬_)
+open import Relation.Binary.PropositionalEquality using (_≡_; refl; _≢_)
+open import Relation.Nullary using (¬_; yes; no)
 
-ProcessId    = Fin n
+ProcessId = Fin n
 LocalEventId = ℕ
 
 private
@@ -29,6 +29,12 @@ data Event : ProcessId → LocalEventId → Set where
   init : Event pid zero
   send : Maybe Message   → Event pid eid → Event pid (suc eid)
   recv : Event pid′ eid′ → Event pid eid → Event pid (suc eid)
+
+pid[_] : Event pid eid → ProcessId
+pid[_] {pid} {eid} e = pid
+
+eid[_] : Event pid eid → LocalEventId
+eid[_] {pid} {eid} e = eid
 
 private
   variable
@@ -94,7 +100,6 @@ size (recv e e′) = suc (size e + size e′)
 
 postulate
   uniquely-identify : ∀ (e e′ : Event pid eid) → e ≡ᵉ e′
-  ⊏-dec : ∀ (e : Event pid eid) (e′ : Event pid′ eid′) → e ⊏ e′ ⊎ ¬ e ⊏ e′
 
 uniquely-identify′ : ∀ (e : Event pid eid) (e′ : Event pid eid′) →
                      eid ≡ eid′ → e ≡ᵉ e′
@@ -142,3 +147,38 @@ init-min (recv _ e@(recv _ _)) = trans (init-min e) processOrder₂
                       in tri≈ (⊏-irrefl′ e≡ᵉe′) e≡ᵉe′ (⊏-irrefl′ (sym e≡ᵉe′))
 ... | tri> _ _    c = let e′⊏e = <⇒⊏ e′ e c
                       in tri> (⊏-asym e′⊏e) ((_$′ e′⊏e) ∘′ ⊏-irrefl′ ∘′ sym) e′⊏e
+
+≡ᵉ-dec : e ≡ᵉ e′ ⊎ ¬ e ≡ᵉ e′
+≡ᵉ-dec {pid} {eid} {e} {pid′} {eid′} {e′} with pid Fin.≟ pid′ | <-cmp eid eid′
+... | yes refl | tri< a _    _ = inj₂ λ { refl → ⊏-irrefl (<⇒⊏ e e′ a) }
+... | yes refl | tri≈ _ refl _ = inj₁ (uniquely-identify e e′)
+... | yes refl | tri> _ _    c = inj₂ λ { refl → ⊏-irrefl (<⇒⊏ e′ e c) }
+... | no  x    | _             = inj₂ λ { refl → x refl }
+
+processOrder₁-inv : e ⊏ send m e′ → e ≡ᵉ e′ ⊎ e ⊏ e′
+processOrder₁-inv processOrder₁ = inj₁ refl
+processOrder₁-inv (trans x y) with processOrder₁-inv y
+... | inj₁ refl = inj₂ x
+... | inj₂ z    = inj₂ (trans x z)
+
+processOrder₂-inv : e ⊏ recv e′ e″ → (e ≡ᵉ e′ ⊎ e ⊏ e′) ⊎ (e ≡ᵉ e″ ⊎ e ⊏ e″)
+processOrder₂-inv processOrder₂ = inj₂ (inj₁ refl)
+processOrder₂-inv send⊏recv     = inj₁ (inj₁ refl)
+processOrder₂-inv (trans x y) with processOrder₂-inv y
+... | inj₁ (inj₁ refl) = inj₁ (inj₂ x)
+... | inj₁ (inj₂ z)    = inj₁ (inj₂ (trans x z))
+... | inj₂ (inj₁ refl) = inj₂ (inj₂ x)
+... | inj₂ (inj₂ z)    = inj₂ (inj₂ (trans x z))
+
+⊏-dec : e ⊏ e′ ⊎ ¬ e ⊏ e′
+⊏-dec {e = e} {e′ = init}      = inj₂ ((λ ()) ∘′ ⊏⇒size)
+⊏-dec {e = e} {e′ = send _ e′} with ⊏-dec {e = e} {e′ = e′} | ≡ᵉ-dec {e = e} {e′ = e′}
+... | inj₁ x | _         = inj₁ (trans x processOrder₁)
+... | inj₂ x | inj₁ refl = inj₁ processOrder₁
+... | inj₂ x | inj₂ y    = inj₂ ([ y , x ]′ ∘′ processOrder₁-inv)
+⊏-dec {e = e} {e′ = recv e′ e″} with ⊏-dec {e = e} {e′ = e′} | ⊏-dec {e = e} {e′ = e″} | ≡ᵉ-dec {e = e} {e′ = e′} | ≡ᵉ-dec {e = e} {e′ = e″}
+... | inj₁ x | _      | _         | _         = inj₁ (trans x send⊏recv)
+... | _      | inj₁ x | _         | _         = inj₁ (trans x processOrder₂)
+... | _      | _      | inj₁ refl | _         = inj₁ send⊏recv
+... | _      | _      | _         | inj₁ refl = inj₁ processOrder₂
+... | inj₂ x | inj₂ y | inj₂ z    | inj₂ w    = inj₂ ([ [ z , x ]′ , [ w , y ]′ ]′ ∘′ processOrder₂-inv)
