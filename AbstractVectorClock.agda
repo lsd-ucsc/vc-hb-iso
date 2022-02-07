@@ -28,8 +28,9 @@ record VCᵃ : Set₁ where
   field
     VC    : Set
     vc[_] : Event pid eid → VC
+    _≈_   : VC → VC → Set
     _≺_   : VC → VC → Set
-    ≺-isStrictPartialOrder : IsStrictPartialOrder _≡_ _≺_
+    ≺-isStrictPartialOrder : IsStrictPartialOrder _≈_ _≺_
 
 
 record IsSound (vcᵃ : VCᵃ) : Set where
@@ -54,7 +55,7 @@ record IsSound (vcᵃ : VCᵃ) : Set where
 
 record IsComplete (vcᵃ : VCᵃ) : Set where
   open VCᵃ vcᵃ
-  open IsStrictPartialOrder ≺-isStrictPartialOrder renaming (irrefl to ≺-irrefl; trans to ≺-trans)
+  open IsStrictPartialOrder ≺-isStrictPartialOrder using (module Eq) renaming (irrefl to ≺-irrefl; trans to ≺-trans)
 
   field
     rule₁ : ∀ {e : Event pid eid} {e′ : Event pid′ eid′} →
@@ -70,8 +71,8 @@ record IsComplete (vcᵃ : VCᵃ) : Set where
                   pid ≡ pid′ → vc[ e ] ≺ vc[ e′ ] → e ⊏ e′
   completeness₁ {eid = eid} {eid′ = eid′} {e = e} {e′ = e′} refl x with <-cmp eid eid′
   ... | tri< y _ _ = <⇒⊏ _ _ y
-  ... | tri≈ _ y _ = ⊥-elim (≺-irrefl (subst (λ e′ → vc[ e ] ≡ vc[ e′ ]) (uniquely-identify′ e e′ y) refl) x)
-  ... | tri> _ _ y = ⊥-elim (≺-irrefl refl (≺-trans (rule₁ refl y) x))
+  ... | tri≈ _ y _ = ⊥-elim (≺-irrefl (subst (λ e′ → vc[ e ] ≈ vc[ e′ ]) (uniquely-identify′ e e′ y) Eq.refl) x)
+  ... | tri> _ _ y = ⊥-elim (≺-irrefl Eq.refl (≺-trans (rule₁ refl y) x))
 
   completeness₂ : ∀ {e : Event pid eid} {e′ : Event pid′ eid′} →
         pid ≢ pid′ → vc[ e ] ≺ vc[ e′ ] → e ⊏ e′
