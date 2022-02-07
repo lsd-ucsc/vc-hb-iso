@@ -15,7 +15,7 @@ open import Data.Nat.Properties using (<-cmp)
 open import Data.Product using (_×_; proj₁; proj₂)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Event n Message
-open import Relation.Binary using (IsStrictPartialOrder; Tri; tri<; tri≈; tri>)
+open import Relation.Binary using (Tri; tri<; tri≈; tri>)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; _≢_)
 open import Relation.Nullary using (¬_; yes; no)
 
@@ -26,16 +26,19 @@ private
 
 record VCᵃ : Set₁ where
   field
-    VC    : Set
-    vc[_] : Event pid eid → VC
-    _≈_   : VC → VC → Set
-    _≺_   : VC → VC → Set
-    ≺-isStrictPartialOrder : IsStrictPartialOrder _≈_ _≺_
+    VC       : Set
+    vc[_]    : Event pid eid → VC
+    _≈_      : VC → VC → Set
+    ≈-refl   : ∀ {vc} → vc ≈ vc
+--  ≈-trans  : ∀ {vc vc′ vc″} → vc ≈ vc′ → vc′ ≈ vc″ → vc ≈ vc″
+--  ≈-sym    : ∀ {vc vc′} → vc ≈ vc′ → vc′ ≈ vc
+    _≺_      : VC → VC → Set
+    ≺-irrefl : ∀ {vc} → ¬ vc ≺ vc
+    ≺-trans  : ∀ {vc vc′ vc″} → vc ≺ vc′ → vc′ ≺ vc″ → vc ≺ vc″
 
 
 record IsSound (vcᵃ : VCᵃ) : Set where
   open VCᵃ vcᵃ
-  open IsStrictPartialOrder ≺-isStrictPartialOrder renaming (trans to ≺-trans)
 
   field
     rule₁ : ∀ {e : Event pid eid} {m} →
@@ -55,7 +58,6 @@ record IsSound (vcᵃ : VCᵃ) : Set where
 
 record IsComplete (vcᵃ : VCᵃ) : Set where
   open VCᵃ vcᵃ
-  open IsStrictPartialOrder ≺-isStrictPartialOrder using (module Eq) renaming (irrefl to ≺-irrefl; trans to ≺-trans)
 
   field
     rule₁ : ∀ {e : Event pid eid} {e′ : Event pid′ eid′} →
@@ -71,8 +73,8 @@ record IsComplete (vcᵃ : VCᵃ) : Set where
                   pid ≡ pid′ → vc[ e ] ≺ vc[ e′ ] → e ⊏ e′
   completeness₁ {eid = eid} {eid′ = eid′} {e = e} {e′ = e′} refl x with <-cmp eid eid′
   ... | tri< y _ _ = <⇒⊏ _ _ y
-  ... | tri≈ _ y _ = ⊥-elim (≺-irrefl (subst (λ e′ → vc[ e ] ≈ vc[ e′ ]) (uniquely-identify′ e e′ y) Eq.refl) x)
-  ... | tri> _ _ y = ⊥-elim (≺-irrefl Eq.refl (≺-trans (rule₁ refl y) x))
+  ... | tri≈ _ y _ = ⊥-elim (≺-irrefl (subst (λ e → vc[ e ] ≺ vc[ e′ ]) (uniquely-identify′ _ _ y) x))
+  ... | tri> _ _ y = ⊥-elim (≺-irrefl (≺-trans (rule₁ refl y) x))
 
   completeness₂ : ∀ {e : Event pid eid} {e′ : Event pid′ eid′} →
         pid ≢ pid′ → vc[ e ] ≺ vc[ e′ ] → e ⊏ e′
