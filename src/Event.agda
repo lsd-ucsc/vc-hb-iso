@@ -136,3 +136,30 @@ eid<⇒⊏-locally {e = e} {e′ = e′@(recv {eid = eidˣ} _ x)} refl y with <-
 ... | _         | _      | inj₁ refl | _      = inj₁ processOrder₂
 ... | _         | _      | _         | inj₁ w = inj₁ (trans w processOrder₂)
 ... | inj₂ x    | inj₂ y | inj₂ z    | inj₂ w = inj₂ ([ [ x , y ]′ , [ z , w ]′ ]′ ∘′ ⊏-inv₂)
+
+data _⊏̸_ : Event pid eid → Event pid′ eid′ → Set where
+  rule₁ : pid[ e ] ≡ pid[ e′ ] → eid[ e′ ] ≤ eid[ e ] → e ⊏̸ e′
+  rule₂ : pid[ e ] ≢ pid[ e′ ] → e ≡ init → e′ ≡ init → e ⊏̸ e′
+  rule₃ : pid[ e ] ≢ pid[ e′ ] → e ⊏̸ e′ → e ⊏̸ send m e′
+  rule₄ : pid[ e ] ≢ pid[ e′ ] → e ⊏̸ e′ → e ⊏̸ e″ → e ⊏̸ recv e″ e′
+
+¬⇒⊏̸₁ : pid[ e ] ≡ pid[ e′ ] → ¬ e ⊏ e′ → e ⊏̸ e′
+¬⇒⊏̸₁ {pid} {eid} {e} {pid′} {eid′} {e′} x y with <-cmp eid eid′
+... | tri< a _    _  = ⊥-elim (y (eid<⇒⊏-locally x a))
+... | tri≈ _ refl _  = rule₁ x ≤-refl
+... | tri> _ _    c  = rule₁ x (<⇒≤ c)
+
+¬⇒⊏̸₂ : pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → e ⊏̸ e′
+¬⇒⊏̸₂ {e = e} {e′ = init}       x y = {!!}
+¬⇒⊏̸₂ {e = e} {e′ = send m e′}  x y with ⊏-dec {e = e} {e′ = e′}
+... | inj₁ z = ⊥-elim (y (trans z processOrder₁))
+... | inj₂ z = rule₃ x (¬⇒⊏̸₂ x z)
+¬⇒⊏̸₂ {e = e} {e′ = recv e″ e′} x y with ⊏-dec {e = e} {e′ = e′} | ⊏-dec {e = e} {e′ = e″}
+... | inj₁ z | _      = ⊥-elim (y (trans z processOrder₂))
+... | _      | inj₁ w = ⊥-elim (y (trans w send⊏recv))
+... | inj₂ z | inj₂ w = rule₄ x (¬⇒⊏̸₂ x z) (¬⇒⊏̸₂ {!!} w)
+
+¬⇒⊏̸ : ¬ e ⊏ e′ → e ⊏̸ e′
+¬⇒⊏̸ {pid} {_} {_} {pid′} {_} {_} with pid Fin.≟ pid′
+... | yes x = ¬⇒⊏̸₁ x
+... | no  x = ¬⇒⊏̸₂ x
