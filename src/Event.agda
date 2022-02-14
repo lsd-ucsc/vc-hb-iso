@@ -14,8 +14,8 @@ open import Data.Product using (_×_)
 open import Data.Sum using (_⊎_; inj₁; inj₂; [_,_]′)
 open import Function using (_∘′_)
 open import Relation.Binary using (tri<; tri≈; tri>)
-open import Relation.Binary.HeterogeneousEquality using (_≅_; refl; subst)
-open import Relation.Binary.PropositionalEquality using (_≡_; refl; _≢_)
+open import Relation.Binary.HeterogeneousEquality using (_≅_; refl; _≇_; subst)
+open import Relation.Binary.PropositionalEquality using (_≡_; refl; _≢_; sym)
 open import Relation.Nullary using (¬_; yes; no)
 
 ProcessId = Fin n
@@ -139,27 +139,34 @@ eid<⇒⊏-locally {e = e} {e′ = e′@(recv {eid = eidˣ} _ x)} refl y with <-
 
 data _⊏̸_ : Event pid eid → Event pid′ eid′ → Set where
   rule₁ : pid[ e ] ≡ pid[ e′ ] → eid[ e′ ] ≤ eid[ e ] → e ⊏̸ e′
-  rule₂ : pid[ e ] ≢ pid[ e′ ] → e ≡ init → e′ ≡ init → e ⊏̸ e′
+  rule₂ : pid[ e ] ≢ pid[ e′ ] → e′ ≡ init → e ⊏̸ e′
   rule₃ : pid[ e ] ≢ pid[ e′ ] → e ⊏̸ e′ → e ⊏̸ send m e′
-  rule₄ : pid[ e ] ≢ pid[ e′ ] → e ⊏̸ e′ → e ⊏̸ e″ → e ⊏̸ recv e″ e′
-
-¬⇒⊏̸₁ : pid[ e ] ≡ pid[ e′ ] → ¬ e ⊏ e′ → e ⊏̸ e′
-¬⇒⊏̸₁ {pid} {eid} {e} {pid′} {eid′} {e′} x y with <-cmp eid eid′
-... | tri< a _    _  = ⊥-elim (y (eid<⇒⊏-locally x a))
-... | tri≈ _ refl _  = rule₁ x ≤-refl
-... | tri> _ _    c  = rule₁ x (<⇒≤ c)
-
-¬⇒⊏̸₂ : pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → e ⊏̸ e′
-¬⇒⊏̸₂ {e = e} {e′ = init}       x y = {!!}
-¬⇒⊏̸₂ {e = e} {e′ = send m e′}  x y with ⊏-dec {e = e} {e′ = e′}
-... | inj₁ z = ⊥-elim (y (trans z processOrder₁))
-... | inj₂ z = rule₃ x (¬⇒⊏̸₂ x z)
-¬⇒⊏̸₂ {e = e} {e′ = recv e″ e′} x y with ⊏-dec {e = e} {e′ = e′} | ⊏-dec {e = e} {e′ = e″}
-... | inj₁ z | _      = ⊥-elim (y (trans z processOrder₂))
-... | _      | inj₁ w = ⊥-elim (y (trans w send⊏recv))
-... | inj₂ z | inj₂ w = rule₄ x (¬⇒⊏̸₂ x z) (¬⇒⊏̸₂ {!!} w)
+  rule₄ : pid[ e ] ≢ pid[ e′ ] → e ⊏̸ e′ → e ⊏̸ e″ → e ≇ e″ → e ⊏̸ recv e″ e′
 
 ¬⇒⊏̸ : ¬ e ⊏ e′ → e ⊏̸ e′
 ¬⇒⊏̸ {pid} {_} {_} {pid′} {_} {_} with pid Fin.≟ pid′
 ... | yes x = ¬⇒⊏̸₁ x
+  where
+  ¬⇒⊏̸₁ : pid[ e ] ≡ pid[ e′ ] → ¬ e ⊏ e′ → e ⊏̸ e′
+  ¬⇒⊏̸₁ {pid} {eid} {e} {pid′} {eid′} {e′} x y with <-cmp eid eid′
+  ... | tri< a _ _  = ⊥-elim (y (eid<⇒⊏-locally x a))
+  ... | tri≈ _ b _  = rule₁ x (≤-reflexive (sym b))
+  ... | tri> _ _ c  = rule₁ x (<⇒≤ c)
 ... | no  x = ¬⇒⊏̸₂ x
+  where
+  ¬⇒⊏̸₂ : pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → e ⊏̸ e′
+  ¬⇒⊏̸₂ {e = e} {e′ = init}       x y = rule₂ x refl
+  ¬⇒⊏̸₂ {e = e} {e′ = send m e′}  x y with ⊏-dec {e = e} {e′ = e′}
+  ... | inj₁ z = ⊥-elim (y (trans z processOrder₁))
+  ... | inj₂ z = rule₃ x (¬⇒⊏̸ z)
+  ¬⇒⊏̸₂ {e = e} {e′ = recv e″ e′} x y with ⊏-dec {e = e} {e′ = e′} | ⊏-dec {e = e} {e′ = e″} | ≅-dec {e = e} {e′ = e″}
+  ... | inj₁ z | _      | _         = ⊥-elim (y (trans z processOrder₂))
+  ... | _      | inj₁ w | _         = ⊥-elim (y (trans w send⊏recv))
+  ... | _      | _      | inj₁ refl = ⊥-elim (y send⊏recv)
+  ... | inj₂ z | inj₂ w | inj₂ u    = rule₄ x (¬⇒⊏̸ z) (¬⇒⊏̸ w) u
+
+⊏̸⇒¬ : e ⊏̸ e′ → ¬ e ⊏ e′
+⊏̸⇒¬ (rule₁ pid≡pid′ ¬eid<eid′)       = {!!}
+⊏̸⇒¬ (rule₂ pid≢pid′ refl)            = (λ ()) ∘′ ⊏⇒size<
+⊏̸⇒¬ (rule₃ pid≢pid′ e⊏̸e′)            = [ (λ { refl → pid≢pid′ refl}) , ⊏̸⇒¬ e⊏̸e′ ]′ ∘′ ⊏-inv₁
+⊏̸⇒¬ (rule₄ pid≢pid′ e⊏̸e′ e⊏̸e″ e≇e″)  = [ [ e≇e″ , ⊏̸⇒¬ e⊏̸e″ ]′ , [ (λ { refl → pid≢pid′ refl}) , ⊏̸⇒¬ e⊏̸e′ ]′ ]′ ∘′ ⊏-inv₂
