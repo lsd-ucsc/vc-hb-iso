@@ -22,18 +22,17 @@ open import Relation.Nullary using (¬_; yes; no)
 
 private
   variable
-    pid  pid′  pid″  : ProcessId
-    eid  eid′  eid″  : LocalEventId
-    kind kind′ kind″ : EventKind
+    pid pid′ pid″ : ProcessId
+    eid eid′ eid″ : LocalEventId
     m  : Message
-    e  : Event pid  eid  kind
-    e′ : Event pid′ eid′ kind′
-    e″ : Event pid″ eid″ kind″
+    e  : Event pid  eid
+    e′ : Event pid′ eid′
+    e″ : Event pid″ eid″
 
 record Clock : Set₁ where
   field
     C        : Set
-    C[_]     : Event pid eid kind → C
+    C[_]     : Event pid eid → C
     _≈_      : C → C → Set
     ≈-refl   : ∀ {c} → c ≈ c
 --  ≈-trans  : ∀ {c c′ c″} → c ≈ c′ → c′ ≈ c″ → c ≈ c″

@@ -20,15 +20,14 @@ open import Relation.Nullary using (¬_; yes; no)
 
 private
   variable
-    pid  pid′  pid″  : ProcessId
-    eid  eid′  eid″  : LocalEventId
-    kind kind′ kind″ : EventKind
+    pid pid′ pid″ : ProcessId
+    eid eid′ eid″ : LocalEventId
     m  : Message
-    e  : Event pid  eid  kind
-    e′ : Event pid′ eid′ kind′
-    e″ : Event pid″ eid″ kind″
+    e  : Event pid  eid
+    e′ : Event pid′ eid′
+    e″ : Event pid″ eid″
 
-data _⊏_ : Event pid eid kind → Event pid′ eid′ kind′ → Set where
+data _⊏_ : Event pid eid → Event pid′ eid′ → Set where
   processOrder₁ : e ⊏ send m e
   processOrder₂ : e ⊏ recv e′ e
   send⊏recv     : e ⊏ recv e  e′
@@ -37,7 +36,7 @@ data _⊏_ : Event pid eid kind → Event pid′ eid′ kind′ → Set where
 ------------------------------------------------------------------------
 -- Properties about `_⊏_`, in particular, it's a strict partial order.
 
-size : Event pid eid kind → ℕ
+size : Event pid eid → ℕ
 size init        = zero
 size (send _ e)  = suc (size e)
 size (recv e e′) = suc (size e + size e′)
@@ -64,12 +63,12 @@ size (recv e e′) = suc (size e + size e′)
 ⊏-irrefl′ refl = ⊏-irrefl
 
 eid<⇒⊏-locally : pid[ e ] ≡ pid[ e′ ] → eid[ e ] < eid[ e′ ] → e ⊏ e′
-eid<⇒⊏-locally {_} {eid} {_} {e} {_} {suc eid′} {_} {send m e′} x y with <-cmp eid eid′
+eid<⇒⊏-locally {_} {eid} {e} {_} {suc eid′} {send m e′} x y with <-cmp eid eid′
 ... | tri< a _ _ = trans (eid<⇒⊏-locally x a) processOrder₁
 ... | tri> _ _ c = ⊥-elim (1+n≰n (≤-trans y c))
 ... | tri≈ _ b _ with uniquely-identify {e = e} {e′ = e′} x b
 ... | refl = processOrder₁
-eid<⇒⊏-locally {_} {eid} {_} {e} {_} {suc eid′} {_} {recv _ e′} x y with <-cmp eid eid′
+eid<⇒⊏-locally {_} {eid} {e} {_} {suc eid′} {recv _ e′} x y with <-cmp eid eid′
 ... | tri< a _ _ = trans (eid<⇒⊏-locally x a) processOrder₂
 ... | tri> _ _ c = ⊥-elim (1+n≰n (≤-trans y c))
 ... | tri≈ _ b _ with uniquely-identify {e = e} {e′ = e′} x b
@@ -82,7 +81,7 @@ eid<⇒⊏-locally {_} {eid} {_} {e} {_} {suc eid′} {_} {recv _ e′} x y with
 ... | tri> _ _ c = ⊥-elim (⊏-asym y (eid<⇒⊏-locally (sym x) c ))
 
 ⊏-tri-locally : pid[ e ] ≡ pid[ e′ ] → e ⊏ e′ ⊎ e ≅ e′ ⊎ e′ ⊏ e
-⊏-tri-locally {pid} {eid} {_} {_} {pid} {eid′} {_} {_} refl with <-cmp eid eid′
+⊏-tri-locally {pid} {eid} {_} {pid} {eid′} {_} refl with <-cmp eid eid′
 ... | tri< a _ _ = inj₁ (eid<⇒⊏-locally refl a)
 ... | tri≈ _ b _ = inj₂ (inj₁ (uniquely-identify refl b))
 ... | tri> _ _ c = inj₂ (inj₂ (eid<⇒⊏-locally refl c))
@@ -115,18 +114,18 @@ eid<⇒⊏-locally {_} {eid} {_} {e} {_} {suc eid′} {_} {recv _ e′} x y with
 ... | _         | _      | _         | inj₁ w = inj₁ (trans w processOrder₂)
 ... | inj₂ x    | inj₂ y | inj₂ z    | inj₂ w = inj₂ ([ [ x , y ]′ , [ z , w ]′ ]′ ∘′ ⊏-inv₂)
 
-data _⊏̸_ : Event pid eid kind → Event pid′ eid′ kind′ → Set where
+data _⊏̸_ : Event pid eid → Event pid′ eid′ → Set where
   rule₁ : pid[ e ] ≡ pid[ e′ ] → eid[ e′ ] ≤ eid[ e ] → e ⊏̸ e′
   rule₂ : pid[ e ] ≢ pid[ e′ ] → e′ ≡ init → e ⊏̸ e′
   rule₃ : pid[ e ] ≢ pid[ e′ ] → e ⊏̸ e′ → e ⊏̸ send m e′
   rule₄ : pid[ e ] ≢ pid[ e′ ] → e ⊏̸ e′ → e ⊏̸ e″ → e ≇ e″ → e ⊏̸ recv e″ e′
 
 ¬⇒⊏̸ : ¬ e ⊏ e′ → e ⊏̸ e′
-¬⇒⊏̸ {pid} {_} {_} {_} {pid′} {_} {_} {_} with pid Fin.≟ pid′
+¬⇒⊏̸ {pid} {_} {_} {pid′} {_} {_} with pid Fin.≟ pid′
 ... | yes x = ¬⇒⊏̸₁ x
   where
   ¬⇒⊏̸₁ : pid[ e ] ≡ pid[ e′ ] → ¬ e ⊏ e′ → e ⊏̸ e′
-  ¬⇒⊏̸₁ {pid} {eid} {_} {e} {pid′} {eid′} {_} {e′} x y with <-cmp eid eid′
+  ¬⇒⊏̸₁ {pid} {eid} {e} {pid′} {eid′} {e′} x y with <-cmp eid eid′
   ... | tri< a _ _  = ⊥-elim (y (eid<⇒⊏-locally x a))
   ... | tri≈ _ b _  = rule₁ x (≤-reflexive (sym b))
   ... | tri> _ _ c  = rule₁ x (<⇒≤ c)
