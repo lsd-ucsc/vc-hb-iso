@@ -101,6 +101,13 @@ eid<⇒⊏-locally {_} {eid} {e} {_} {suc eid′} {recv _ e′} x y with <-cmp e
 ... | inj₂ (inj₁ refl) = inj₂ (inj₂ x)
 ... | inj₂ (inj₂ z)    = inj₂ (inj₂ (trans x z))
 
+diff-p-⊏-inv₁ : pid[ e ] ≢ pid[ e′ ] → e ⊏ send m e′ → e ⊏ e′
+diff-p-⊏-inv₁ pid≢ processOrder₁ = ⊥-elim (pid≢ refl)
+diff-p-⊏-inv₁ {e = e} pid≢ (trans {e′ = e″} x y)
+  with ⊏-inv₁ y
+... | inj₁ refl = x
+... | inj₂ y₁ = trans x y₁
+
 ⊏-dec : e ⊏ e′ ⊎ ¬ e ⊏ e′
 ⊏-dec {e = e} {e′ = init} = inj₂ ((λ ()) ∘′ ⊏⇒size<)
 ⊏-dec {e = e} {e′ = send _ e′} with ≅-dec {e = e} {e′ = e′} | ⊏-dec {e = e} {e′ = e′}
