@@ -6,6 +6,7 @@
 module Event where
 
 open import Postulates
+open import Data.Bool using(true;false)
 open import Data.Empty using (⊥-elim)
 open import Data.Fin as Fin using (Fin)
 open import Data.Nat as Nat
@@ -14,9 +15,9 @@ open import Data.Product using (_×_)
 open import Data.Sum using (_⊎_; inj₁; inj₂; [_,_]′)
 open import Function using (_∘′_)
 open import Relation.Binary using (tri<; tri≈; tri>)
-open import Relation.Binary.HeterogeneousEquality using (_≅_; refl; subst)
+open import Relation.Binary.HeterogeneousEquality using (_≅_; refl; subst;_≇_;≅-to-≡)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; _≢_)
-open import Relation.Nullary using (¬_; yes; no)
+open import Relation.Nullary using (¬_; yes; no;_because_;ofʸ;ofⁿ)
 
 ProcessId = Fin n
 LocalEventId = ℕ
@@ -123,6 +124,13 @@ eid<⇒⊏-locally {e = e} {e′ = e′@(recv {eid = eidˣ} _ x)} refl y with <-
 ... | inj₁ (inj₂ z)    = inj₁ (inj₂ (trans x z))
 ... | inj₂ (inj₁ refl) = inj₂ (inj₂ x)
 ... | inj₂ (inj₂ z)    = inj₂ (inj₂ (trans x z))
+
+diff-p-⊏-inv₁ : pid[ e ] ≢ pid[ e′ ] → e ⊏ send m e′ → e ⊏ e′
+diff-p-⊏-inv₁ pid≢ processOrder₁ = ⊥-elim (pid≢ refl)
+diff-p-⊏-inv₁ {e = e} pid≢ (trans {e′ = e″} x y)
+  with ⊏-inv₁ y 
+... | inj₁ refl = x
+... | inj₂ y₁ = trans x y₁
 
 ⊏-dec : e ⊏ e′ ⊎ ¬ e ⊏ e′
 ⊏-dec {e = e} {e′ = init} = inj₂ ((λ ()) ∘′ ⊏⇒size<)

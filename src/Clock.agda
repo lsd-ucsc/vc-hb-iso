@@ -59,6 +59,8 @@ record ⊏-Determining (clock : Clock) : Set where
 
   field
     ⊏-determining-rule₁ : pid[ e ] ≡ pid[ e′ ] → ¬ e ⊏ e′ → ¬ C[ e ] ≺ C[ e′ ]
+    -- alternative: ⊏-determining-rule₁ : pid[ e ] ≡ pid[ e′ ] → e ⊏ e′ → C[ e ] ≺ C[ e′ ]
+    -- alternative2: ⊏-determining-rule₁ : pid[ e ] ≡ pid[ e′ ] → eid[ e ] < eid[ e′ ] → C[ e ] ≺ C[ e′ ]
     ⊏-determining-rule₂ : e′ ≡ init → ¬ C[ e ] ≺ C[ e′ ]
     ⊏-determining-rule₃ : pid[ e ] ≢ pid[ e′ ] → ¬ C[ e ] ≺ C[ e′ ] → ¬ C[ e ] ≺ C[ send m e′ ]
     ⊏-determining-rule₄ : pid[ e ] ≢ pid[ e′ ] → ¬ C[ e ] ≺ C[ e′ ] → ¬ C[ e ] ≺ C[ e″ ] → ¬ C[ e ] ≺ C[ recv e″ e′ ]    
