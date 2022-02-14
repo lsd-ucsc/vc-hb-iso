@@ -101,12 +101,24 @@ eid<⇒⊏-locally {_} {eid} {e} {_} {suc eid′} {recv _ e′} x y with <-cmp e
 ... | inj₂ (inj₁ refl) = inj₂ (inj₂ x)
 ... | inj₂ (inj₂ z)    = inj₂ (inj₂ (trans x z))
 
+-- optimization: if pid[ e ] ≢ pid[ e′ ] → e ≇ e′ is provable then diff-p-⊏-inv₁ and diff-p-⊏-inv₂ can be simplified
+
 diff-p-⊏-inv₁ : pid[ e ] ≢ pid[ e′ ] → e ⊏ send m e′ → e ⊏ e′
 diff-p-⊏-inv₁ pid≢ processOrder₁ = ⊥-elim (pid≢ refl)
 diff-p-⊏-inv₁ {e = e} pid≢ (trans {e′ = e″} x y)
   with ⊏-inv₁ y
 ... | inj₁ refl = x
 ... | inj₂ y₁ = trans x y₁
+
+diff-p-⊏-inv₂ : pid[ e ] ≢ pid[ e′ ] → e ⊏ recv e″ e′ → e ⊏ e′ ⊎ (e ≅ e″ ⊎ e ⊏ e″)
+diff-p-⊏-inv₂ pid≢ processOrder₂ = ⊥-elim (pid≢ refl)
+diff-p-⊏-inv₂ {e = e}{e″ = e} pid≢ send⊏recv = inj₂ (inj₁ refl)
+diff-p-⊏-inv₂ {e = e} {e′ = e′} {e″ = e″} pid≢ (trans {e′ = e′₁} x y)
+  with ⊏-inv₂ y
+... | inj₁ (inj₁ refl) = inj₂ (inj₂ x)
+... | inj₁ (inj₂ y₁) =   inj₂ (inj₂ (trans x y₁))
+... | inj₂ (inj₁ refl) = inj₁ x
+... | inj₂ (inj₂ y₁) = inj₁ (trans x y₁)
 
 ⊏-dec : e ⊏ e′ ⊎ ¬ e ⊏ e′
 ⊏-dec {e = e} {e′ = init} = inj₂ ((λ ()) ∘′ ⊏⇒size<)

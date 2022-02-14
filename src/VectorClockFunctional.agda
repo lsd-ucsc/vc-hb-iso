@@ -17,8 +17,8 @@ import Data.Vec.Functional.Relation.Binary.Pointwise.Properties as Pointwiseₚ
 open import Data.Sum using (_⊎_;inj₁;inj₂)
 open import Function using (const)
 open import Relation.Binary
-open import Relation.Binary.HeterogeneousEquality using (_≅_;_≇_;≅-to-≡) renaming(cong to hetero-cong)
-open import Relation.Binary.PropositionalEquality using (refl;_≡_;subst;sym;cong-app;_≢_)
+open import Relation.Binary.HeterogeneousEquality using (_≅_;_≇_;≅-to-≡) renaming(cong to hetero-cong;subst to hetero-subst)
+open import Relation.Binary.PropositionalEquality using (refl;_≡_;subst;sym;cong;cong-app;_≢_)
 open import Relation.Nullary using (¬_;_because_;ofⁿ;ofʸ)
 
 open VectorEq (DecSetoid.setoid  NatProp.≡-decSetoid)
@@ -122,22 +122,33 @@ same-p-lemma {e = e} {e′ = e′} pid≡ vc[e]pid[e]≤vc[e′]pid[e]
 diff-p-lemma : pid[ e ] ≢ pid[ e′ ] → vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] → e ⊏ e′
 diff-p-lemma = {!!}
 
+vc[_]-hetero-cong : pid[ e ] ≡ pid[ e′ ] → e ≅ e′ → vc[ e ] ≡ vc[ e′ ]
+vc[_]-hetero-cong {e = e} {e′ = e} refl _≅_.refl = cong  vc[_]{x = e} refl
+
 vc[init][∀p]≡0 : ∀ {pid} i → i ≢ pid → vc[ init {pid} ] i ≡ 0
 vc[init][∀p]≡0 {pid} i i≢pid = updateAt-minimal i pid {const 1} (replicate 0) i≢pid
 
 clock-⊏-determining : ⊏-Determining clock
--- ⊏-determining-rule₁ clock-⊏-determining {e = e} {e′ = e′} refl ¬e⊏e′ (∀≤ , (pid , p<p))
---   with same-p-lemma {e = e} {e′ = e′} refl (∀≤ pid[ e′ ])
--- ... | inj₁ x = ¬e⊏e′ x
--- ... | inj₂ _≅_.refl with () ← vc[p]-<⇒≇ pid p<p (hetero-cong vc[_] (_≅_.refl {x = e}))
--- ⊏-determining-rule₂ clock-⊏-determining {pid′} {init} {pid} {_} {e} x (∀≤ , ∃<)
---  with pid Fin.≟ pid′
--- ... | false because ofⁿ pid≢ = <⇒≱ (0<vc[e]pid[e] {e = e})(subst (_≥ vc[ e ] pid[ e ]) (vc[init][∀p]≡0 pid pid≢) (∀≤ pid))
--- ... | true because _ = {!!}
-⊏-determining-rule₃ clock-⊏-determining {e = e} {e′ = e′} {m = m} pid≢ x y = x (⊏-preserving clock-⊏-preserving e⊏e′)
+⊏-determining-rule₁ clock-⊏-determining {e = e} {e′ = e′} refl eid≤ (∀≤ , pid , p<p)
+ with ⊏-tri-locally {e = e} {e′ = e′} refl
+... | inj₁ x        = ≤⇒≯ eid≤ (⊏⇒eid<-locally refl x)
+... | inj₂ (inj₁ x) = ≤⇒≯ p<p (s≤s (subst (λ v → v pid ≤ vc[ e ] pid) (vc[_]-hetero-cong refl x) ≤-refl))
+... | inj₂ (inj₂ y) = ≤⇒≯ (∀≤ pid[ e ]) (e⊏e′⇒vc[e]pid[e′]<vc[e′]pid[e′] y)
+⊏-determining-rule₂ clock-⊏-determining {pid} {_} {e} {pid′} {init} pid≢ x (∀≤ , ∃<) = <⇒≱ (0<vc[e]pid[e] {e = e})(subst (_≥ vc[ e ] pid[ e ]) (vc[init][∀p]≡0 pid pid≢) (∀≤ pid))
+⊏-determining-rule₃ clock-⊏-determining {e = e} {e′ = e′} {m = m}   pid≢ x y    = x (⊏-preserving clock-⊏-preserving e⊏e′)
   where
     e⊏send[e′] : e ⊏ send m e′
-    e⊏send[e′] = diff-p-lemma {e = e} {e′ = send m e′} pid≢ (proj₁ y pid[ e ])
+    e⊏send[e′] = diff-p-lemma pid≢ (proj₁ y pid[ e ])
     e⊏e′ : e ⊏ e′
     e⊏e′ = diff-p-⊏-inv₁ pid≢ e⊏send[e′]
-⊏-determining-rule₄ clock-⊏-determining = {!!}
+⊏-determining-rule₄ clock-⊏-determining {e = e} {e′ = e′} {e″ = e″} pid≢ x y z w = x (⊏-preserving clock-⊏-preserving e⊏e′)
+  where
+    e⊏recv[e″,e′] : e ⊏ recv e″ e′
+    e⊏recv[e″,e′] =  diff-p-lemma pid≢ (proj₁ w pid[ e ])
+    e⊏e′ : e ⊏ e′
+    e⊏e′ with diff-p-⊏-inv₂ pid≢ e⊏recv[e″,e′]
+    ... | inj₁ v = v
+    ... | inj₂ (inj₁ v) with () ← z v
+    ... | inj₂ (inj₂ v) with () ← y (⊏-preserving clock-⊏-preserving v)
+
+    
