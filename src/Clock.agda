@@ -47,8 +47,8 @@ record ⊏-Preserving (clock : Clock) : Set where
 
   field
     ⊏-preserving-rule₁ : C[ e ] ≺ C[ send m e ]
-    ⊏-preserving-rule₂ : C[ e ] ≺ C[ recv e′ e″ ]
-    ⊏-preserving-rule₃ : C[ e ] ≺ C[ recv e′ e″ ]
+    ⊏-preserving-rule₂ : C[ e′ ] ≺ C[ recv e e′ ]
+    ⊏-preserving-rule₃ : C[ e ] ≺ C[ recv e e′ ]
 
   ⊏-preserving : e ⊏ e′ → C[ e ] ≺ C[ e′ ]
   ⊏-preserving processOrder₁ = ⊏-preserving-rule₁

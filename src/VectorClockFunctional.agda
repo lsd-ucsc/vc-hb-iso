@@ -5,6 +5,7 @@ open import Event
 open import HappensBefore
 open import Clock
 open import Data.Bool using (true;false)
+open import Data.Empty using (⊥-elim)
 open import Data.Fin as Fin using (Fin)
 open import Data.Nat as ℕ
 open import Data.Nat.Properties as NatProp
@@ -19,7 +20,7 @@ open import Function using (const)
 open import Relation.Binary
 open import Relation.Binary.HeterogeneousEquality using (_≅_;_≇_;≅-to-≡) renaming(cong to hetero-cong;subst to hetero-subst)
 open import Relation.Binary.PropositionalEquality using (refl;_≡_;subst;sym;cong;cong-app;_≢_)
-open import Relation.Nullary using (¬_;_because_;ofⁿ;ofʸ)
+open import Relation.Nullary using (¬_;_because_;ofⁿ;ofʸ;yes;no)
 
 open VectorEq (DecSetoid.setoid  NatProp.≡-decSetoid)
 
@@ -57,7 +58,7 @@ zip⊔-monotonicˡ {vc} {vc′} m = m≤m⊔n (vc m) (vc′ m)
 zip⊔-monotonicʳ : ∀ m → vc m ≤ zipWith _⊔_ vc′ vc m
 zip⊔-monotonicʳ {vc} {vc′} m = m≤n⊔m (vc′ m) (vc m)
 
--- equalities and inequalities on VC
+ -- lemmas about VC
 
 _≈_ : VC → VC → Set
 _≈_ = _≋_
@@ -80,6 +81,46 @@ vc[p]-<⇒≇ pid vc[pid]<vc′[pid] vc≅vc′ = <⇒≢ vc[pid]<vc′[pid] (co
 vc-≺⇒≇ : vc ≺ vc′ → vc ≇ vc′
 vc-≺⇒≇ (_ , pid , vc[pid]<vc′[pid] ) vc≅vc′ = vc[p]-<⇒≇ pid vc[pid]<vc′[pid] vc≅vc′
 
+ -- lemmas about vc[_]
+
+vc[e]pid⊔bv[e′]pid<vc[recv[e,e′]]pid : vc[ e ] pid[ e′ ] ⊔ vc[ e′ ] pid[ e′ ] < vc[ recv e e′ ] pid[ e′ ]
+vc[e]pid⊔bv[e′]pid<vc[recv[e,e′]]pid {e = e} {e′ = e′} = subst (vc[ e ] pid[ e′ ] ⊔ vc[ e′ ] pid[ e′ ] <_) (updateAt-updates-suc pid[ e′ ]) ≤-refl
+
+vc[e]pid<vc[recv[e,e′]]pid : vc[ e ] pid[ e′ ] < vc[ recv e e′ ] pid[ e′ ]
+vc[e]pid<vc[recv[e,e′]]pid {e = e} {e′ = e′} = <-transʳ (zip⊔-monotonicˡ {vc′ = vc[ e ]} {vc = vc[ e′ ]} pid[ e′ ]) (vc[e]pid⊔bv[e′]pid<vc[recv[e,e′]]pid {e = e} {e′ = e′})
+
+vc[e′]pid<vc[recv[e,e′]]pid : vc[ e′ ] pid[ e′ ] < vc[ recv e e′ ] pid[ e′ ]
+vc[e′]pid<vc[recv[e,e′]]pid {e′ = e′} {e = e} = <-transʳ (zip⊔-monotonicʳ {vc = vc[ e′ ]} {vc′ = vc[ e ]}  pid[ e′ ]) (vc[e]pid⊔bv[e′]pid<vc[recv[e,e′]]pid {e = e} {e′ = e′})
+
+vc[e]pid<vc[send[e]]pid : vc[ e ] pid[ e ] < vc[ send m e ] pid[ e ] 
+vc[e]pid<vc[send[e]]pid {e = e} = subst  (vc[ e ] pid[ e ] <_) (updateAt-updates-suc pid[ e ]) ≤-refl
+
+vc[init]pid≡1 : ∀ {pid} → vc[ init {pid} ] pid ≡ 1
+vc[init]pid≡1 {pid} = updateAt-updates pid (replicate 0)
+
+pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i : ∀ i → i ≢ pid[ e′ ] →  (zipWith _⊔_ vc[ e ] vc[ e′ ]) i ≡ vc[ recv e e′ ] i
+pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i {e′ = e′} {e = e} i i≢pid = sym (updateAt-minimal i pid[ e′ ] (zipWith _⊔_ vc[ e ] vc[ e′ ]) i≢pid)
+
+pid≢i⇒vc[e′]i≤vc[recv[e,e′]]i : ∀ i → i ≢ pid[ e′ ] → vc[ e′ ] i ≤ vc[ recv e e′ ] i
+pid≢i⇒vc[e′]i≤vc[recv[e,e′]]i {e′ = e′} {e = e} i i≢pid = subst ( vc[ e′ ] i ≤_) (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i {e′ = e′} {e = e} i i≢pid ) (zip⊔-monotonicʳ {vc = vc[ e′ ]} {vc′ = vc[ e ]} i)
+
+pid≢i⇒vc[e]i≤vc[recv[e,e′]]i : ∀ i → i ≢ pid[ e′ ] → vc[ e ] i ≤ vc[ recv e e′ ] i
+pid≢i⇒vc[e]i≤vc[recv[e,e′]]i {e′ = e′} {e = e} i i≢pid = subst (vc[ e ] i ≤_) (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i {e′ = e′} {e = e} i i≢pid) ((zip⊔-monotonicˡ {vc′ = vc[ e ]} {vc = vc[ e′ ]} i))
+
+pid≢i⇒vc[e]i≡vc[send[e]]i : ∀ i → i ≢ pid[ e ] → vc[ send m e ] i ≡ vc[ e ] i
+pid≢i⇒vc[e]i≡vc[send[e]]i {e = e} i i≢pid = updateAt-minimal i pid[ e ] vc[ e ] i≢pid
+
+pid≢i⇒vc[init]i≡0 : ∀ {pid} i → i ≢ pid → vc[ init {pid} ] i ≡ 0
+pid≢i⇒vc[init]i≡0 {pid} i i≢pid = updateAt-minimal i pid (replicate 0) i≢pid
+
+0<vc[e]pid[e] : 0 < vc[ e ] pid[ e ]
+0<vc[e]pid[e] {pid} e@{e = init}    = subst (0 <_) (sym vc[init]pid≡1) (s≤s z≤n)
+0<vc[e]pid[e] {pid} {e = send x e}  = subst (0 <_) (sym (updateAt-updates pid vc[ e ])) (<-trans (0<vc[e]pid[e]{e = e}) (s≤s ≤-refl))
+0<vc[e]pid[e] {pid} {e = recv e e′} = <-trans (<-transˡ (0<vc[e]pid[e] {e = e′}) (zip⊔-monotonicʳ {vc[ e′ ]} {vc[ e ]} pid)) ((subst (zipWith _⊔_ vc[ e ] vc[ e′ ] pid[ e′ ] <_) (updateAt-updates-suc pid[ e′ ]) (s≤s ≤-refl)))
+
+vc[_]-hetero-cong : pid[ e ] ≡ pid[ e′ ] → e ≅ e′ → vc[ e ] ≡ vc[ e′ ]
+vc[_]-hetero-cong {e = e} {e′ = e} refl _≅_.refl = cong  vc[_]{x = e} refl
+
  -- Clock definition
 
 clock : Clock
@@ -97,20 +138,32 @@ open ⊏-Preserving
 open ⊏-Determining
 
 clock-⊏-preserving : ⊏-Preserving clock
-clock-⊏-preserving = {!!}
+⊏-preserving-rule₁ clock-⊏-preserving {e = e} {m = m} = lemma , pid[ e ] , vc[e]pid<vc[send[e]]pid {e = e} {m = m}
+  where
+   lemma : Pointwise _≤_ vc[ e ] vc[ send m e ]
+   lemma i with i Fin.≟ pid[ e ]
+   ... | yes x rewrite x  = <⇒≤ (vc[e]pid<vc[send[e]]pid {e = e} {m = m})
+   ... | no x = subst  (vc[ e ] i ≤_ ) (sym (pid≢i⇒vc[e]i≡vc[send[e]]i {e = e} {m = m} i x)) ≤-refl
+⊏-preserving-rule₂ clock-⊏-preserving {e′ = e′} {e = e} = lemma , pid[ e′ ] , (vc[e′]pid<vc[recv[e,e′]]pid {e′ = e′} {e = e})
+  where
+   lemma : Pointwise _≤_ vc[ e′ ] vc[ recv e e′ ]
+   lemma i with i Fin.≟ pid[ e′ ]
+   ... | yes x rewrite x  = <⇒≤ (vc[e′]pid<vc[recv[e,e′]]pid {e′ = e′} {e = e} ) 
+   ... | no x = pid≢i⇒vc[e′]i≤vc[recv[e,e′]]i {e′ = e′ } {e = e} i x
+⊏-preserving-rule₃ clock-⊏-preserving {e = e} {e′ = e′} = lemma , pid[ e′ ] , (vc[e]pid<vc[recv[e,e′]]pid {e = e} {e′ = e′} )
+  where
+   lemma : Pointwise _≤_ vc[ e ] vc[ recv e e′ ]
+   lemma i with i Fin.≟ pid[ e′ ]
+   ... | yes x rewrite x  = <⇒≤ (vc[e]pid<vc[recv[e,e′]]pid {e = e} {e′ = e′})
+   ... | no x = pid≢i⇒vc[e]i≤vc[recv[e,e′]]i {e′ = e′} {e = e } i x
 
- -- lemmas about vc[_]
+-- other lemmas about vc[_]
 
 e⊏e′⇒vc[e]pid[e′]<vc[e′]pid[e′] : e ⊏ e′ →  vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
-e⊏e′⇒vc[e]pid[e′]<vc[e′]pid[e′] {e = e} {e′ = send _ e}  processOrder₁       = subst (suc (vc[ e ] pid[ e ]) ≤_) (updateAt-updates-suc pid[ e ]) ≤-refl
-e⊏e′⇒vc[e]pid[e′]<vc[e′]pid[e′] {e = e} {e′ = recv e′ e} processOrder₂       = <-transʳ (zip⊔-monotonicʳ {vc[ e ]} {vc[ e′ ]} pid[ e ]) (subst (zipWith _⊔_ vc[ e′ ] vc[ e ] pid[ e ] <_) (updateAt-updates-suc pid[ e ]) (s≤s ≤-refl))
-e⊏e′⇒vc[e]pid[e′]<vc[e′]pid[e′] {e = e} {e′ = recv e e′} send⊏recv           = <-transʳ (zip⊔-monotonicˡ {vc[ e ]} {vc[ e′ ]} pid[ e′ ]) (subst (zipWith _⊔_ vc[ e ] vc[ e′ ] pid[ e′ ] <_) (updateAt-updates-suc pid[ e′ ]) (s≤s ≤-refl))
+e⊏e′⇒vc[e]pid[e′]<vc[e′]pid[e′] {e = e} {e′ = send m e}  processOrder₁       = vc[e]pid<vc[send[e]]pid {e = e} {m = m}
+e⊏e′⇒vc[e]pid[e′]<vc[e′]pid[e′] {e = e′} {e′ = recv e e′} processOrder₂      = vc[e′]pid<vc[recv[e,e′]]pid {e′ = e′} {e = e}
+e⊏e′⇒vc[e]pid[e′]<vc[e′]pid[e′] {e = e} {e′ = recv e e′} send⊏recv           = vc[e]pid<vc[recv[e,e′]]pid {e = e} {e′ = e′}
 e⊏e′⇒vc[e]pid[e′]<vc[e′]pid[e′] (trans {_} {_} {_} {_} {_} {_} {pid″} x x₁)  = <-transʳ (proj₁ (⊏-preserving clock-⊏-preserving x) pid″) (e⊏e′⇒vc[e]pid[e′]<vc[e′]pid[e′] x₁)
-
-0<vc[e]pid[e] : 0 < vc[ e ] pid[ e ]
-0<vc[e]pid[e] {pid} e@{e = init}    = subst (0 <_) (sym (updateAt-updates pid (replicate 0))) (s≤s z≤n)
-0<vc[e]pid[e] {pid} {e = send x e}  = subst (0 <_) (sym (updateAt-updates pid vc[ e ])) (<-trans (0<vc[e]pid[e]{e = e}) (s≤s ≤-refl))
-0<vc[e]pid[e] {pid} {e = recv e e′} = <-trans (<-transˡ (0<vc[e]pid[e] {e = e′}) (zip⊔-monotonicʳ {vc[ e′ ]} {vc[ e ]} pid)) ((subst (zipWith _⊔_ vc[ e ] vc[ e′ ] pid[ e′ ] <_) (updateAt-updates-suc pid[ e′ ]) (s≤s ≤-refl)))
 
 same-p-lemma : pid[ e ] ≡ pid[ e′ ] → vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] → e ⊏ e′ ⊎ e ≅ e′
 same-p-lemma {e = e} {e′ = e′} pid≡ vc[e]pid[e]≤vc[e′]pid[e]
@@ -120,27 +173,52 @@ same-p-lemma {e = e} {e′ = e′} pid≡ vc[e]pid[e]≤vc[e′]pid[e]
 ... | inj₂ (inj₂ y) with () ← <⇒≱ (e⊏e′⇒vc[e]pid[e′]<vc[e′]pid[e′] y) vc[e]pid[e]≤vc[e′]pid[e]
 
 diff-p-lemma : pid[ e ] ≢ pid[ e′ ] → vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] → e ⊏ e′
-diff-p-lemma = {!!}
-
-vc[_]-hetero-cong : pid[ e ] ≡ pid[ e′ ] → e ≅ e′ → vc[ e ] ≡ vc[ e′ ]
-vc[_]-hetero-cong {e = e} {e′ = e} refl _≅_.refl = cong  vc[_]{x = e} refl
-
-vc[init][∀p]≡0 : ∀ {pid} i → i ≢ pid → vc[ init {pid} ] i ≡ 0
-vc[init][∀p]≡0 {pid} i i≢pid = updateAt-minimal i pid {const 1} (replicate 0) i≢pid
+diff-p-lemma {e = e} e′@{e′ = init} pid≢ vc[pid]≤ = ⊥-elim (≤⇒≯ vc[pid]≤ (subst ( vc[ e ] pid[ e ] >_) (sym vc[e′]pid[e]≡0) (0<vc[e]pid[e] {e = e})))
+  where
+    vc[e′]pid[e]≡0 : vc[ e′ ] pid[ e ] ≡ 0
+    vc[e′]pid[e]≡0 = pid≢i⇒vc[init]i≡0 pid[ e ] pid≢
+diff-p-lemma {e = e} {e′ = send m e′} pid≢ vc[pid]≤ = trans (diff-p-lemma pid≢ (subst (vc[ e ] pid[ e ] ≤_) (lemma) vc[pid]≤)) processOrder₁
+  where
+   lemma : vc[ send m e′ ] pid[ e ] ≡ vc[ e′ ] pid[ e ]
+   lemma  = updateAt-minimal pid[ e ] pid[ e′ ] vc[ e′ ] pid≢
+diff-p-lemma {e = e} {e′ = recv e″ e′} pid≢ vc[pid]≤
+  with vc[ e″ ] pid[ e ] ≤? vc[ e′ ] pid[ e ]
+... | yes vc[pid]≤₂  = trans (diff-p-lemma pid≢ (subst (vc[ e ] pid[ e ] ≤_) (m≤n⇒m⊔n≡n vc[pid]≤₂) lemma)) processOrder₂
+   where
+    lemma : vc[ e ] pid[ e ] ≤ vc[ e″ ] pid[ e ] ⊔ vc[ e′ ] pid[ e ]
+    lemma = subst (vc[ e ] pid[ e ] ≤_) (updateAt-minimal pid[ e ] pid[ e′ ] (λ i → vc[ e″ ] i ⊔ vc[ e′ ] i) pid≢) vc[pid]≤
+... | no vc[pid]≰
+      with pid[ e ] Fin.≟ pid[ e″ ]
+...   | no pid≢₂ = trans (diff-p-lemma pid≢₂ (subst (vc[ e ] pid[ e ] ≤_) (m≥n⇒m⊔n≡m {!!}) lemma)) send⊏recv
+      where
+        lemma : vc[ e ] pid[ e ] ≤ vc[ e″ ] pid[ e ] ⊔ vc[ e′ ] pid[ e ]
+        lemma = subst (vc[ e ] pid[ e ] ≤_) (updateAt-minimal pid[ e ] pid[ e′ ] (λ i → vc[ e″ ] i ⊔ vc[ e′ ] i) pid≢) vc[pid]≤
+        lemma₂ : vc[ e″ ] pid[ e ] ≥ vc[ e′ ] pid[ e ]
+        lemma₂ = {!!}
+...   | yes _ = {!!}
 
 clock-⊏-determining : ⊏-Determining clock
 ⊏-determining-rule₁ clock-⊏-determining {e = e} {e′ = e′} refl eid≤ (∀≤ , pid , p<p)
  with ⊏-tri-locally {e = e} {e′ = e′} refl
 ... | inj₁ x        = ≤⇒≯ eid≤ (⊏⇒eid<-locally refl x)
-... | inj₂ (inj₁ x) = ≤⇒≯ p<p (s≤s (subst (λ v → v pid ≤ vc[ e ] pid) (vc[_]-hetero-cong refl x) ≤-refl))
+... | inj₂ (inj₁ _≅_.refl) = <⇒≢ p<p refl
 ... | inj₂ (inj₂ y) = ≤⇒≯ (∀≤ pid[ e ]) (e⊏e′⇒vc[e]pid[e′]<vc[e′]pid[e′] y)
-⊏-determining-rule₂ clock-⊏-determining {pid} {_} {e} {pid′} {init} pid≢ x (∀≤ , ∃<) = <⇒≱ (0<vc[e]pid[e] {e = e})(subst (_≥ vc[ e ] pid[ e ]) (vc[init][∀p]≡0 pid pid≢) (∀≤ pid))
-⊏-determining-rule₃ clock-⊏-determining {e = e} {e′ = e′} {m = m}   pid≢ x y    = x (⊏-preserving clock-⊏-preserving e⊏e′)
+-- possible lemma : ∀(e : Event pid eid) → vc[ e ] pid[ e ] ≡ eid[ e ]
+⊏-determining-rule₂ clock-⊏-determining {pid} {_} {e} {pid′} {init} pid≢ x (∀≤ , ∃<) = <⇒≱ (0<vc[e]pid[e] {e = e})(subst (_≥ vc[ e ] pid[ e ]) (pid≢i⇒vc[init]i≡0 pid pid≢) (∀≤ pid))
+⊏-determining-rule₃ clock-⊏-determining {e = e} {e′ = e′} {m = m}   pid≢ x y = x (⊏-preserving clock-⊏-preserving e⊏e′)
   where
     e⊏send[e′] : e ⊏ send m e′
     e⊏send[e′] = diff-p-lemma pid≢ (proj₁ y pid[ e ])
     e⊏e′ : e ⊏ e′
     e⊏e′ = diff-p-⊏-inv₁ pid≢ e⊏send[e′]
+    -- this lemma can simplify the proof
+    -- lemma : Pointwise _≤_ vc[ e ] vc[ e′ ]
+    -- lemma i with i Fin.≟ pid[ e′ ]
+    -- ... | yes refl with pid Fin.≟ pid[ e′ ]
+    -- ...         | yes w = {!∀≤ pid[ e′ ]!} -- vc[ e ] pid < vc[ e′ ] pid, vc[ e ] i  ≤ suc (vc[ e′ ] i)
+    -- ...         | no w  = {! !}
+    -- lemma i | no z  = subst (vc[ e ] i ≤_) (updateAt-minimal i pid[ e′ ] vc[ e′ ] z ) (∀≤ i) 
+
 ⊏-determining-rule₄ clock-⊏-determining {e = e} {e′ = e′} {e″ = e″} pid≢ x y z w = x (⊏-preserving clock-⊏-preserving e⊏e′)
   where
     e⊏recv[e″,e′] : e ⊏ recv e″ e′
