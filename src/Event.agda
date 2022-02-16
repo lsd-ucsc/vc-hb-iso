@@ -24,7 +24,7 @@ data Event : ProcessId → LocalEventId → Set where
          Message →
          Event pid eid → Event pid (suc eid)
   recv : ∀ {pid pid′} {eid eid′} →
-         Event pid′ eid′ →
+         Event pid′ eid′ → 
          Event pid eid → Event pid (suc eid)
 
 -- To make heterogeneous equality `≅` work nicely with `Event`, we need
