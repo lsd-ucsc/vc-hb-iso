@@ -56,6 +56,10 @@ record ⊏-Preserving (clock : Clock) : Set where
   ⊏-preserving send⊏recv     = ⊏-preserving-rule₃
   ⊏-preserving (trans x y)   = ≺-trans (⊏-preserving x) (⊏-preserving y)
 
+  minimal₁ : (∀ {pid} {pid′} {eid} {eid′} (e : Event pid eid) (e′ : Event pid′ eid′) → e ⊏ e′ → C[ e ] ≺ C[ e′ ]) → (C[ e ] ≺ C[ send m e ])
+  minimal₁ x = x _ _ processOrder₁
+  
+
 
 record ⊏-Determining (clock : Clock) : Set where
   open Clock clock
@@ -63,16 +67,29 @@ record ⊏-Determining (clock : Clock) : Set where
   field
     ⊏-determining-rule₁ : pid[ e ] ≡ pid[ e′ ] → eid[ e′ ] ≤ eid[ e ] → ¬ C[ e ] ≺ C[ e′ ]
     ⊏-determining-rule₂ : pid[ e ] ≢ pid[ e′ ] → e′ ≡ init → ¬ C[ e ] ≺ C[ e′ ]
-    ⊏-determining-rule₃ : pid[ e ] ≢ pid[ e′ ] → ¬ C[ e ] ≺ C[ e′ ] → ¬ C[ e ] ≺ C[ send m e′ ]
-    ⊏-determining-rule₄ : pid[ e ] ≢ pid[ e′ ] → ¬ C[ e ] ≺ C[ e′ ] → ¬ C[ e ] ≺ C[ e″ ] → e ≇ e″ → ¬ C[ e ] ≺ C[ recv e″ e′ ]
+    ⊏-determining-rule₃ : pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → ¬ C[ e ] ≺ C[ send m e′ ]
+    ⊏-determining-rule₄ : pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → ¬ e ⊏ e″ → e ≇ e″ → ¬ C[ e ] ≺ C[ recv e″ e′ ]
 
   ⊏-determining-contra : e ⊏̸ e′ → ¬ C[ e ] ≺ C[ e′ ]
   ⊏-determining-contra (rule₁ x y)     = ⊏-determining-rule₁ x y
   ⊏-determining-contra (rule₂ x y)     = ⊏-determining-rule₂ x y
-  ⊏-determining-contra (rule₃ x y)     = ⊏-determining-rule₃ x (⊏-determining-contra y)
-  ⊏-determining-contra (rule₄ x y z w) = ⊏-determining-rule₄ x (⊏-determining-contra y) (⊏-determining-contra z) w
+  ⊏-determining-contra (rule₃ x y)     = ⊏-determining-rule₃ x (⊏̸⇒¬ y) 
+  ⊏-determining-contra (rule₄ x y z w) = ⊏-determining-rule₄ x (⊏̸⇒¬ y) (⊏̸⇒¬ z) w 
 
   ⊏-determining : C[ e ] ≺ C[ e′ ] → e ⊏ e′
   ⊏-determining {e = e} {e′ = e′} x with ⊏-dec {e = e} {e′ = e′}
   ... | inj₁ y = y
   ... | inj₂ y = ⊥-elim (⊏-determining-contra (¬⇒⊏̸ y) x)
+  
+  minimal₁ : (∀ {pid} {pid′} {eid} {eid′} (e : Event pid eid) (e′ : Event pid′ eid′) →  e ⊏̸ e′ → ¬ C[ e ] ≺ C[ e′ ]) → (pid[ e ] ≡ pid[ e′ ] → eid[ e′ ] ≤ eid[ e ] → ¬ C[ e ] ≺ C[ e′ ])
+  minimal₁ x pid≡ eid≤ = x _ _ (rule₁ pid≡ eid≤)
+
+  -- minimal₂
+
+  minimal₃ : (∀ {pid} {pid′} {eid} {eid′} (e : Event pid eid) (e′ : Event pid′ eid′) →  e ⊏̸ e′ → ¬ C[ e ] ≺ C[ e′ ]) → (pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → ¬ C[ e ] ≺ C[ send m e′ ])
+  minimal₃ {e = e} {e′ = e′} x y z = x _ _ (rule₃ y (¬⇒⊏̸ z) )
+
+  minimal₄ : (∀ {pid} {pid′} {eid} {eid′} (e : Event pid eid) (e′ : Event pid′ eid′) →  e ⊏̸ e′ → ¬ C[ e ] ≺ C[ e′ ]) → (pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → ¬ e ⊏ e″ → e ≇ e″ → ¬ C[ e ] ≺ C[ recv e″ e′ ])
+  minimal₄ x y z w u = x _ _ (rule₄ y (¬⇒⊏̸ z) (¬⇒⊏̸ w) u)
+
+
