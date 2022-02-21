@@ -78,13 +78,13 @@ module _ (clock : Clock) where
     contra ¬e⊏e′ = contra-inductive (¬⇒⊏̸ ¬e⊏e′)
       where
       contra-inductive : e ⊏̸ e′ → ¬ C[ e ] ≺ C[ e′ ]
-      contra-inductive (rule₁ x y)     = ⊏-determining-rule₁ rules x y
-      contra-inductive (rule₂ x y)     = ⊏-determining-rule₂ rules x y
-      contra-inductive (rule₃ x y)     = ⊏-determining-rule₃ rules x (⊏̸⇒¬ y)
-      contra-inductive (rule₄ x y z w) = ⊏-determining-rule₄ rules x (⊏̸⇒¬ y) (⊏̸⇒¬ z) w
+      contra-inductive (⊏̸-eid  x y)     = ⊏-determining-rule₁ rules x y
+      contra-inductive (⊏̸-init x y)     = ⊏-determining-rule₂ rules x y
+      contra-inductive (⊏̸-send x y)     = ⊏-determining-rule₃ rules x (⊏̸⇒¬ y)
+      contra-inductive (⊏̸-recv x y z w) = ⊏-determining-rule₄ rules x (⊏̸⇒¬ y) (⊏̸⇒¬ z) w
 
   ⊏-DeterminingRules-necessary : ⊏-Determining → ⊏-DeterminingRules
-  ⊏-determining-rule₁ (⊏-DeterminingRules-necessary x) y z     = contraposition x (⊏̸⇒¬ (rule₁ y z))
-  ⊏-determining-rule₂ (⊏-DeterminingRules-necessary x) y z     = contraposition x (⊏̸⇒¬ (rule₂ y z))
-  ⊏-determining-rule₃ (⊏-DeterminingRules-necessary x) y z     = contraposition x (⊏̸⇒¬ (rule₃ y (¬⇒⊏̸ z)))
-  ⊏-determining-rule₄ (⊏-DeterminingRules-necessary x) y z w u = contraposition x (⊏̸⇒¬ (rule₄ y (¬⇒⊏̸ z) (¬⇒⊏̸ w) u))
+  ⊏-determining-rule₁ (⊏-DeterminingRules-necessary x) y z     = contraposition x (⊏̸⇒¬ (⊏̸-eid y z))
+  ⊏-determining-rule₂ (⊏-DeterminingRules-necessary x) y z     = contraposition x (⊏̸⇒¬ (⊏̸-init y z))
+  ⊏-determining-rule₃ (⊏-DeterminingRules-necessary x) y z     = contraposition x (⊏̸⇒¬ (⊏̸-send y (¬⇒⊏̸ z)))
+  ⊏-determining-rule₄ (⊏-DeterminingRules-necessary x) y z w u = contraposition x (⊏̸⇒¬ (⊏̸-recv y (¬⇒⊏̸ z) (¬⇒⊏̸ w) u))
