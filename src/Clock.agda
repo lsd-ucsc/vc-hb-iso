@@ -2,23 +2,18 @@
 -- Generic clock interface.
 ------------------------------------------------------------------------
 
-module Clock  where
+module Clock where
 
 open import Postulates
 open import Event
 open import HappensBefore
 open import Data.Empty using (⊥-elim)
-open import Data.Fin as Fin using (_≟_)
-open import Data.Maybe using (Maybe)
-open import Data.Nat as Nat
-open import Data.Nat.Properties as ℕₚ
-open import Data.Product using (_×_; proj₁; proj₂)
-open import Data.Sum using (_⊎_; inj₁; inj₂)
-open import Function using (_∘′_)
-open import Relation.Binary using (Tri; tri<; tri≈; tri>)
+open import Data.Nat using (_≤_)
+open import Data.Sum using (inj₁; inj₂)
 open import Relation.Binary.HeterogeneousEquality using (_≇_)
-open import Relation.Binary.PropositionalEquality using (_≡_; refl; _≢_)
-open import Relation.Nullary using (¬_; yes; no)
+open import Relation.Binary.PropositionalEquality using (_≡_; _≢_)
+open import Relation.Nullary using (¬_)
+open import Relation.Nullary.Negation using (contraposition)
 
 private
   variable
@@ -33,63 +28,63 @@ record Clock : Set₁ where
   field
     C        : Set
     C[_]     : Event pid eid → C
-    _≈_      : C → C → Set
-    ≈-refl   : ∀ {c} → c ≈ c
---  ≈-trans  : ∀ {c c′ c″} → c ≈ c′ → c′ ≈ c″ → c ≈ c″
---  ≈-sym    : ∀ {c c′} → c ≈ c′ → c′ ≈ c
     _≺_      : C → C → Set
-    ≺-irrefl : ∀ {c} → ¬ c ≺ c
     ≺-trans  : ∀ {c c′ c″} → c ≺ c′ → c′ ≺ c″ → c ≺ c″
 
 
-record ⊏-Preserving (clock : Clock) : Set where
+module _ (clock : Clock) where
   open Clock clock
 
-  field
-    ⊏-preserving-rule₁ : C[ e ] ≺ C[ send m e ]
-    ⊏-preserving-rule₂ : C[ e′ ] ≺ C[ recv e e′ ]
-    ⊏-preserving-rule₃ : C[ e ] ≺ C[ recv e e′ ]
+  ⊏-Preserving : Set
+  ⊏-Preserving = ∀ {pid pid′} {eid eid′} {e : Event pid eid} {e′ : Event pid′ eid′} →
+                 e ⊏ e′ → C[ e ] ≺ C[ e′ ]
 
-  ⊏-preserving : e ⊏ e′ → C[ e ] ≺ C[ e′ ]
-  ⊏-preserving processOrder₁ = ⊏-preserving-rule₁
-  ⊏-preserving processOrder₂ = ⊏-preserving-rule₂
-  ⊏-preserving send⊏recv     = ⊏-preserving-rule₃
-  ⊏-preserving (trans x y)   = ≺-trans (⊏-preserving x) (⊏-preserving y)
+  ⊏-Determining : Set
+  ⊏-Determining = ∀ {pid pid′} {eid eid′} {e : Event pid eid} {e′ : Event pid′ eid′} →
+                  C[ e ] ≺ C[ e′ ] → e ⊏ e′
 
-  minimal₁ : (∀ {pid} {pid′} {eid} {eid′} (e : Event pid eid) (e′ : Event pid′ eid′) → e ⊏ e′ → C[ e ] ≺ C[ e′ ]) → (C[ e ] ≺ C[ send m e ])
-  minimal₁ x = x _ _ processOrder₁
-  
+  record ⊏-PreservingRules : Set where
+    field
+      ⊏-preserving-rule₁ : C[ e ] ≺ C[ send m e ]
+      ⊏-preserving-rule₂ : C[ e ] ≺ C[ recv e′ e  ]
+      ⊏-preserving-rule₃ : C[ e ] ≺ C[ recv e  e′ ]
+  open ⊏-PreservingRules
 
+  record ⊏-DeterminingRules : Set where
+    field
+      ⊏-determining-rule₁ : pid[ e ] ≡ pid[ e′ ] → eid[ e′ ] ≤ eid[ e ] → ¬ C[ e ] ≺ C[ e′ ]
+      ⊏-determining-rule₂ : pid[ e ] ≢ pid[ e′ ] → e′ ≡ init → ¬ C[ e ] ≺ C[ e′ ]
+      ⊏-determining-rule₃ : pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → ¬ C[ e ] ≺ C[ send m e′ ]
+      ⊏-determining-rule₄ : pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → ¬ e ⊏ e″ → e ≇ e″ → ¬ C[ e ] ≺ C[ recv e″ e′ ]
+  open ⊏-DeterminingRules
 
-record ⊏-Determining (clock : Clock) : Set where
-  open Clock clock
+  ⊏-PreservingRules-sufficient : ⊏-PreservingRules → ⊏-Preserving
+  ⊏-PreservingRules-sufficient rules processOrder₁ = ⊏-preserving-rule₁ rules
+  ⊏-PreservingRules-sufficient rules processOrder₂ = ⊏-preserving-rule₂ rules
+  ⊏-PreservingRules-sufficient rules send⊏recv     = ⊏-preserving-rule₃ rules
+  ⊏-PreservingRules-sufficient rules (trans x y)   = ≺-trans (⊏-PreservingRules-sufficient rules x) (⊏-PreservingRules-sufficient rules y)
 
-  field
-    ⊏-determining-rule₁ : pid[ e ] ≡ pid[ e′ ] → eid[ e′ ] ≤ eid[ e ] → ¬ C[ e ] ≺ C[ e′ ]
-    ⊏-determining-rule₂ : pid[ e ] ≢ pid[ e′ ] → e′ ≡ init → ¬ C[ e ] ≺ C[ e′ ]
-    ⊏-determining-rule₃ : pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → ¬ C[ e ] ≺ C[ send m e′ ]
-    ⊏-determining-rule₄ : pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → ¬ e ⊏ e″ → e ≇ e″ → ¬ C[ e ] ≺ C[ recv e″ e′ ]
+  ⊏-PreservingRules-necessary : ⊏-Preserving → ⊏-PreservingRules
+  ⊏-preserving-rule₁ (⊏-PreservingRules-necessary x) = x processOrder₁
+  ⊏-preserving-rule₂ (⊏-PreservingRules-necessary x) = x processOrder₂
+  ⊏-preserving-rule₃ (⊏-PreservingRules-necessary x) = x send⊏recv
 
-  ⊏-determining-contra : e ⊏̸ e′ → ¬ C[ e ] ≺ C[ e′ ]
-  ⊏-determining-contra (rule₁ x y)     = ⊏-determining-rule₁ x y
-  ⊏-determining-contra (rule₂ x y)     = ⊏-determining-rule₂ x y
-  ⊏-determining-contra (rule₃ x y)     = ⊏-determining-rule₃ x (⊏̸⇒¬ y) 
-  ⊏-determining-contra (rule₄ x y z w) = ⊏-determining-rule₄ x (⊏̸⇒¬ y) (⊏̸⇒¬ z) w 
-
-  ⊏-determining : C[ e ] ≺ C[ e′ ] → e ⊏ e′
-  ⊏-determining {e = e} {e′ = e′} x with ⊏-dec {e = e} {e′ = e′}
+  ⊏-DetermingRules-sufficient : ⊏-DeterminingRules → ⊏-Determining
+  ⊏-DetermingRules-sufficient rules {e = e} {e′ = e′} x with ⊏-dec {e = e} {e′ = e′}
   ... | inj₁ y = y
-  ... | inj₂ y = ⊥-elim (⊏-determining-contra (¬⇒⊏̸ y) x)
-  
-  minimal₁ : (∀ {pid} {pid′} {eid} {eid′} (e : Event pid eid) (e′ : Event pid′ eid′) →  e ⊏̸ e′ → ¬ C[ e ] ≺ C[ e′ ]) → (pid[ e ] ≡ pid[ e′ ] → eid[ e′ ] ≤ eid[ e ] → ¬ C[ e ] ≺ C[ e′ ])
-  minimal₁ x pid≡ eid≤ = x _ _ (rule₁ pid≡ eid≤)
+  ... | inj₂ y = ⊥-elim (contra y x)
+    where
+    contra : ¬ e ⊏ e′ → ¬ C[ e ] ≺ C[ e′ ]
+    contra ¬e⊏e′ = contra-inductive (¬⇒⊏̸ ¬e⊏e′)
+      where
+      contra-inductive : e ⊏̸ e′ → ¬ C[ e ] ≺ C[ e′ ]
+      contra-inductive (rule₁ x y)     = ⊏-determining-rule₁ rules x y
+      contra-inductive (rule₂ x y)     = ⊏-determining-rule₂ rules x y
+      contra-inductive (rule₃ x y)     = ⊏-determining-rule₃ rules x (⊏̸⇒¬ y)
+      contra-inductive (rule₄ x y z w) = ⊏-determining-rule₄ rules x (⊏̸⇒¬ y) (⊏̸⇒¬ z) w
 
-  -- minimal₂
-
-  minimal₃ : (∀ {pid} {pid′} {eid} {eid′} (e : Event pid eid) (e′ : Event pid′ eid′) →  e ⊏̸ e′ → ¬ C[ e ] ≺ C[ e′ ]) → (pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → ¬ C[ e ] ≺ C[ send m e′ ])
-  minimal₃ {e = e} {e′ = e′} x y z = x _ _ (rule₃ y (¬⇒⊏̸ z) )
-
-  minimal₄ : (∀ {pid} {pid′} {eid} {eid′} (e : Event pid eid) (e′ : Event pid′ eid′) →  e ⊏̸ e′ → ¬ C[ e ] ≺ C[ e′ ]) → (pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → ¬ e ⊏ e″ → e ≇ e″ → ¬ C[ e ] ≺ C[ recv e″ e′ ])
-  minimal₄ x y z w u = x _ _ (rule₄ y (¬⇒⊏̸ z) (¬⇒⊏̸ w) u)
-
-
+  ⊏-DeterminingRules-necessary : ⊏-Determining → ⊏-DeterminingRules
+  ⊏-determining-rule₁ (⊏-DeterminingRules-necessary x) y z     = contraposition x (⊏̸⇒¬ (rule₁ y z))
+  ⊏-determining-rule₂ (⊏-DeterminingRules-necessary x) y z     = contraposition x (⊏̸⇒¬ (rule₂ y z))
+  ⊏-determining-rule₃ (⊏-DeterminingRules-necessary x) y z     = contraposition x (⊏̸⇒¬ (rule₃ y (¬⇒⊏̸ z)))
+  ⊏-determining-rule₄ (⊏-DeterminingRules-necessary x) y z w u = contraposition x (⊏̸⇒¬ (rule₄ y (¬⇒⊏̸ z) (¬⇒⊏̸ w) u))
