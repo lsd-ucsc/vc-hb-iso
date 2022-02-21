@@ -114,11 +114,15 @@ eid<⇒⊏-locally {_} {eid} {e} {_} {suc eid′} {recv _ e′} x y with <-cmp e
 ... | _         | _      | _         | inj₁ w = inj₁ (trans w processOrder₂)
 ... | inj₂ x    | inj₂ y | inj₂ z    | inj₂ w = inj₂ ([ [ x , y ]′ , [ z , w ]′ ]′ ∘′ ⊏-inv₂)
 
+------------------------------------------------------------------------
+-- Defines `_⊏̸_`, the inductive version of the not-happens-before
+-- relation, and shows it's equivalent to the negated version.
+
 data _⊏̸_ : Event pid eid → Event pid′ eid′ → Set where
-  rule₁ : pid[ e ] ≡ pid[ e′ ] → eid[ e′ ] ≤ eid[ e ] → e ⊏̸ e′
-  rule₂ : pid[ e ] ≢ pid[ e′ ] → e′ ≡ init → e ⊏̸ e′
-  rule₃ : pid[ e ] ≢ pid[ e′ ] → e ⊏̸ e′ → e ⊏̸ send m e′
-  rule₄ : pid[ e ] ≢ pid[ e′ ] → e ⊏̸ e′ → e ⊏̸ e″ → e ≇ e″ → e ⊏̸ recv e″ e′
+  ⊏̸-eid  : pid[ e ] ≡ pid[ e′ ] → eid[ e′ ] ≤ eid[ e ] → e ⊏̸ e′
+  ⊏̸-init : pid[ e ] ≢ pid[ e′ ] → e′ ≡ init → e ⊏̸ e′
+  ⊏̸-send : pid[ e ] ≢ pid[ e′ ] → e ⊏̸ e′ → e ⊏̸ send m e′
+  ⊏̸-recv : pid[ e ] ≢ pid[ e′ ] → e ⊏̸ e′ → e ⊏̸ e″ → e ≇ e″ → e ⊏̸ recv e″ e′
 
 ¬⇒⊏̸ : ¬ e ⊏ e′ → e ⊏̸ e′
 ¬⇒⊏̸ {pid} {_} {_} {pid′} {_} {_} with pid Fin.≟ pid′
@@ -127,23 +131,23 @@ data _⊏̸_ : Event pid eid → Event pid′ eid′ → Set where
   ¬⇒⊏̸₁ : pid[ e ] ≡ pid[ e′ ] → ¬ e ⊏ e′ → e ⊏̸ e′
   ¬⇒⊏̸₁ {pid} {eid} {e} {pid′} {eid′} {e′} x y with <-cmp eid eid′
   ... | tri< a _ _  = ⊥-elim (y (eid<⇒⊏-locally x a))
-  ... | tri≈ _ b _  = rule₁ x (≤-reflexive (sym b))
-  ... | tri> _ _ c  = rule₁ x (<⇒≤ c)
+  ... | tri≈ _ b _  = ⊏̸-eid x (≤-reflexive (sym b))
+  ... | tri> _ _ c  = ⊏̸-eid x (<⇒≤ c)
 ... | no  x = ¬⇒⊏̸₂ x
   where
   ¬⇒⊏̸₂ : pid[ e ] ≢ pid[ e′ ] → ¬ e ⊏ e′ → e ⊏̸ e′
-  ¬⇒⊏̸₂ {e = e} {e′ = init}       x y = rule₂ x refl
+  ¬⇒⊏̸₂ {e = e} {e′ = init}       x y = ⊏̸-init x refl
   ¬⇒⊏̸₂ {e = e} {e′ = send m e′}  x y with ⊏-dec {e = e} {e′ = e′}
   ... | inj₁ z = ⊥-elim (y (trans z processOrder₁))
-  ... | inj₂ z = rule₃ x (¬⇒⊏̸ z)
+  ... | inj₂ z = ⊏̸-send x (¬⇒⊏̸ z)
   ¬⇒⊏̸₂ {e = e} {e′ = recv e″ e′} x y with ⊏-dec {e = e} {e′ = e′} | ⊏-dec {e = e} {e′ = e″} | ≅-dec {e = e} {e′ = e″}
   ... | inj₁ z | _      | _         = ⊥-elim (y (trans z processOrder₂))
   ... | _      | inj₁ w | _         = ⊥-elim (y (trans w send⊏recv))
   ... | _      | _      | inj₁ refl = ⊥-elim (y send⊏recv)
-  ... | inj₂ z | inj₂ w | inj₂ u    = rule₄ x (¬⇒⊏̸ z) (¬⇒⊏̸ w) u
+  ... | inj₂ z | inj₂ w | inj₂ u    = ⊏̸-recv x (¬⇒⊏̸ z) (¬⇒⊏̸ w) u
 
 ⊏̸⇒¬ : e ⊏̸ e′ → ¬ e ⊏ e′
-⊏̸⇒¬ (rule₁ pid≡pid′ eid′≤eid)        = λ x → <-irrefl refl (<-transˡ (⊏⇒eid<-locally pid≡pid′ x) eid′≤eid)
-⊏̸⇒¬ (rule₂ pid≢pid′ refl)            = (λ ()) ∘′ ⊏⇒size<
-⊏̸⇒¬ (rule₃ pid≢pid′ e⊏̸e′)            = [ (λ { refl → pid≢pid′ refl}) , ⊏̸⇒¬ e⊏̸e′ ]′ ∘′ ⊏-inv₁
-⊏̸⇒¬ (rule₄ pid≢pid′ e⊏̸e′ e⊏̸e″ e≇e″)  = [ [ e≇e″ , ⊏̸⇒¬ e⊏̸e″ ]′ , [ (λ { refl → pid≢pid′ refl}) , ⊏̸⇒¬ e⊏̸e′ ]′ ]′ ∘′ ⊏-inv₂
+⊏̸⇒¬ (⊏̸-eid  pid≡pid′ eid′≤eid)       = λ x → <-irrefl refl (<-transˡ (⊏⇒eid<-locally pid≡pid′ x) eid′≤eid)
+⊏̸⇒¬ (⊏̸-init pid≢pid′ refl)           = (λ ()) ∘′ ⊏⇒size<
+⊏̸⇒¬ (⊏̸-send pid≢pid′ e⊏̸e′)           = [ (λ { refl → pid≢pid′ refl}) , ⊏̸⇒¬ e⊏̸e′ ]′ ∘′ ⊏-inv₁
+⊏̸⇒¬ (⊏̸-recv pid≢pid′ e⊏̸e′ e⊏̸e″ e≇e″) = [ [ e≇e″ , ⊏̸⇒¬ e⊏̸e″ ]′ , [ (λ { refl → pid≢pid′ refl}) , ⊏̸⇒¬ e⊏̸e′ ]′ ]′ ∘′ ⊏-inv₂
