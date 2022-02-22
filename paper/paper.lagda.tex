@@ -1,0 +1,62 @@
+\documentclass[acmsmall,review,anonymous]{acmart}
+\settopmatter{printfolios=true,printccs=false,printacmref=false}
+
+%% Remove copyright box
+\setcopyright{none}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
+
+\bibliographystyle{ACM-Reference-Format}
+\citestyle{acmauthoryear}
+
+% editing comments; can be programmatically removed later
+\newcommand{\lk}[1]{\textcolor{blue}{LK: {#1}}}
+
+\usepackage{agda}
+
+\begin{code}[hide]
+module paper where
+\end{code}
+
+\title{Formalizing Logic Clocks in Agda}
+
+\author{Gan Shen}
+\affiliation{\institution{University of California, Santa Cruz} \country{USA}}
+\author{Simon Guo}
+\affiliation{\institution{University of California, Santa Cruz} \country{USA}}
+\author{Lindsey Kuper}
+\affiliation{\institution{University of California, Santa Cruz} \country{USA}}
+
+\begin{abstract}
+Distributed systems are hard to build partly because the lack of
+physically synchronous global clocks makes reasoning about causality
+sometimes impossible. To this end, various logical clocks have been
+proposed and proved to capture causality, but most of the proofs are
+done informally.
+
+In this paper, we define a framework to formally define
+logical clocks and prove they capture causality.
+\end{abstract}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+\section{System Model}
+
+\section{Clock Interface}
+
+\section{Case Study}
+
+\subsection{Lamport Clock}
+
+\subsection{Vector Clock}
+
+\section{Conclusion}
+placeholder~\citep{mattern-vector-time, fidge-vector-time, schmuck-dissertation}
+
+\bibliography{refs}
+
+\end{document}
