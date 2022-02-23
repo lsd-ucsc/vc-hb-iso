@@ -182,7 +182,7 @@ clock-⊏-preserving-rules : ⊏-PreservingRules clock
 ...            | inj₁ v = trans v send⊏recv
 ...            | inj₂ (inj₁ refl) = send⊏recv
 ...            | inj₂ (inj₂ v) = ⊥-elim (<⇒≱ (⊏-preserving-index v) u)
-
+  
 clock-⊏-determining-rules : ⊏-DeterminingRules clock
 ⊏-determining-rule₁ clock-⊏-determining-rules {e = e} {e′ = e′} refl eid≤ (∀≤ , pid , p<p)
  with ⊏-tri-locally {e = e} {e′ = e′} refl
@@ -202,15 +202,21 @@ clock-⊏-determining-rules : ⊏-DeterminingRules clock
     e⊏e′ with ⊏-inv₁ e⊏send[e′] 
     ... | inj₁ refl = ⊥-elim (pid≢ refl)
     ... | inj₂ y = y
-    -- this lemma can simplify the proof
-    -- lemma : Pointwise _≤_ vc[ e ] vc[ e′ ]
-    -- lemma i with i Fin.≟ pid[ e′ ]
-    -- ... | yes refl with pid Fin.≟ pid[ e′ ]
-    -- ...         | yes w = {!∀≤ pid[ e′ ]!} -- vc[ e ] pid < vc[ e′ ] pid, vc[ e ] i  ≤ suc (vc[ e′ ] i)
-    -- ...         | no w  = {! !}
-    -- lemma i | no z  = subst (vc[ e ] i ≤_) (updateAt-minimal i pid[ e′ ] vc[ e′ ] z ) (∀≤ i)
-    -- another lemma that should make the proof more intuitive :
-    -- pid[ e ] ≢ pid[ e′ ] → vc[ e ] ≺ vc[ e′ ] →  recv e _ ∈ e′ 
+-- ⊏-determining-rule₃ clock-⊏-determining-rules {e = e} {e′ = e′} {m = m} pid≢ x y@(∀≤ , p , p<p) = {!!}
+--   where
+--     -- this lemma can simplify the proof
+--     lemma : Pointwise _≤_ vc[ e ] vc[ e′ ]
+--     lemma i with i Fin.≟ pid[ e′ ]
+--     ... | yes refl = bar (subst (suc (vc[ e ] i) ≤_) (sym (updateAt-updates-suc i)) (lemma₁ {e = e} {e′ = send m e′}  pid≢ y))
+--       where bar : ∀{a b} → suc a ≤ suc b → a ≤ b
+--             bar (s≤s x) = x
+--    lemma i | no z  = subst (vc[ e ] i ≤_) (updateAt-minimal i pid[ e′ ] vc[ e′ ] z) (∀≤ i)
+--    lemma₁ : pid[ e ] ≢ pid[ e′ ] → vc[ e ] ≺ vc[ e′ ] → vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
+--    lemma₁ {e′ = init} pid≢ x = {!!}
+--    lemma₁ {e′ = send x₁ e′} pid≢ x = {!!}
+--    lemma₁ {e′ = recv e′ e′₁} pid≢ x = {!!}
+-- maybe helpful? ∀ pid[ e ] ≢ pid[ e′ ] → e ⊏ e′ → ∃[ e″ ]recv e e″ ⊏  e′
+
 ⊏-determining-rule₄ clock-⊏-determining-rules {e = e} {e′ = e′} {e″ = e″} pid≢ x y z w = x e⊏e′
   where
     e⊏recv[e″,e′] : e ⊏ recv e″ e′
@@ -221,3 +227,6 @@ clock-⊏-determining-rules : ⊏-DeterminingRules clock
     ... | inj₁ (inj₂ v) = ⊥-elim (y v)
     ... | inj₂ (inj₁ refl) = ⊥-elim (pid≢ refl)
     ... | inj₂ (inj₂ v) = v
+
+experiment : pid[ e ] ≢ pid[ e′ ] → vc[ e ] ≺ vc[ send m e′ ] → e ⊏ e′
+experiment pid≢ x = {!!}
