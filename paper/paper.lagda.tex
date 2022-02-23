@@ -9,16 +9,13 @@
 \bibliographystyle{ACM-Reference-Format}
 \citestyle{acmauthoryear}
 
-% editing comments; can be programmatically removed later
-\newcommand{\lk}[1]{\textcolor{blue}{LK: {#1}}}
-
 \usepackage{agda}
 
 \begin{code}[hide]
 module paper where
 \end{code}
 
-\title{Formalizing Logic Clocks in Agda}
+\title{Formalizing Vector Clocks in Agda (Functional Pearl)}
 
 \author{Gan Shen}
 \affiliation{\institution{University of California, Santa Cruz} \country{USA}}
@@ -30,12 +27,12 @@ module paper where
 \begin{abstract}
 Distributed systems are hard to build partly because the lack of
 physically synchronous global clocks makes reasoning about causality
-sometimes impossible. To this end, various logical clocks have been
-proposed and proved to capture causality, but most of the proofs are
-done informally.
+sometimes impossible. To this end, vector logical clocks have been
+proposed and proved to capture causality, in particular, they preserve
+and determin the happens-before relation. However, most of the proofs
+are done informally on paper.
 
-In this paper, we define a framework to formally define
-logical clocks and prove they capture causality.
+In this paper...
 \end{abstract}
 
 \begin{document}
@@ -46,13 +43,15 @@ logical clocks and prove they capture causality.
 
 \section{System Model}
 
-\section{Clock Interface}
+\subsection{Event}
 
-\section{Case Study}
+\subsection{Happens-Before Relation}
 
-\subsection{Lamport Clock}
+\section{Strong Clock Condition}
 
-\subsection{Vector Clock}
+\subsection{Happens-Before Preserving}
+
+\subsection{Happens-Before Determining}
 
 \section{Conclusion}
 placeholder~\citep{mattern-vector-time, fidge-vector-time, schmuck-dissertation}
