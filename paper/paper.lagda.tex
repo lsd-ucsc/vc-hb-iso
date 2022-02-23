@@ -1,0 +1,61 @@
+\documentclass[acmsmall,review,anonymous]{acmart}
+\settopmatter{printfolios=true,printccs=false,printacmref=false}
+
+%% Remove copyright box
+\setcopyright{none}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
+
+\bibliographystyle{ACM-Reference-Format}
+\citestyle{acmauthoryear}
+
+\usepackage{agda}
+
+\begin{code}[hide]
+module paper where
+\end{code}
+
+\title{Formalizing Vector Clocks in Agda (Functional Pearl)}
+
+\author{Gan Shen}
+\affiliation{\institution{University of California, Santa Cruz} \country{USA}}
+\author{Simon Guo}
+\affiliation{\institution{University of California, Santa Cruz} \country{USA}}
+\author{Lindsey Kuper}
+\affiliation{\institution{University of California, Santa Cruz} \country{USA}}
+
+\begin{abstract}
+Distributed systems are hard to build partly because the lack of
+physically synchronous global clocks makes reasoning about causality
+sometimes impossible. To this end, vector logical clocks have been
+proposed and proved to capture causality, in particular, they preserve
+and determin the happens-before relation. However, most of the proofs
+are done informally on paper.
+
+In this paper...
+\end{abstract}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+\section{System Model}
+
+\subsection{Event}
+
+\subsection{Happens-Before Relation}
+
+\section{Strong Clock Condition}
+
+\subsection{Happens-Before Preserving}
+
+\subsection{Happens-Before Determining}
+
+\section{Conclusion}
+placeholder~\citep{mattern-vector-time, fidge-vector-time, schmuck-dissertation}
+
+\bibliography{refs}
+
+\end{document}
