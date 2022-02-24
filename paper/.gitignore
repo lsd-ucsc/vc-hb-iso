@@ -21,6 +21,8 @@
 *.run.xml
 
 ##
+*.ptb
 agda.sty
+postprocess-latex.pl
 paper.tex
 paper.pdf

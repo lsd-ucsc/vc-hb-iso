@@ -9,10 +9,16 @@
 \bibliographystyle{ACM-Reference-Format}
 \citestyle{acmauthoryear}
 
-\usepackage{agda}
+\usepackage{newunicodechar}
+\newunicodechar{ℕ}{\ensuremath{\mathbb{N}}}
+
+\usepackage[references]{agda}
 
 \begin{code}[hide]
 module paper where
+
+open import Data.Fin using (Fin)
+open import Data.Nat using (ℕ)
 \end{code}
 
 \title{Formalizing Vector Clocks in Agda (Functional Pearl)}
@@ -42,10 +48,28 @@ In this paper...
 \section{Introduction}
 
 \section{System Model}
-
-\subsection{Event}
-
-\subsection{Happens-Before Relation}
+We model a distributed system as consisting of a fixed number of
+processes communicating solely by messages. In Agda, we postulate the
+number of processes \AgdaRef{n} as a natural number and the type of
+the messages \AgdaRef{Message}.
+\begin{code}
+postulate
+  n : ℕ
+  Message : Set
+\end{code}
+In an abstract way, a process can be viewed as a sequence of events
+that take place on it, where events are sendings and receivings of
+messages. Similarly, an execution of a distributed system can be
+viewed as an collection of sequences of events of each process. We
+assume each process is assigned an unique identifier
+\AgdaRef{ProcessId}\footnote{Fin n is the Agda type of natural numbers
+less than n.} and each message is assigned a local identifier
+\AgdaRef{LocalEventId} that corresponds to the order it takes place on
+its originating process.
+\begin{code}
+ProcessId = Fin n
+LocalEventId = ℕ
+\end{code}
 
 \section{Strong Clock Condition}
 
