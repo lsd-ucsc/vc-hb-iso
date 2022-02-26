@@ -12,6 +12,10 @@
 \usepackage{newunicodechar}
 \newunicodechar{ℕ}{\ensuremath{\mathbb{N}}}
 
+\usepackage{amsthm}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+
 \usepackage[references]{agda}
 
 \begin{code}[hide]
@@ -50,26 +54,52 @@ In this paper...
 \section{System Model}
 We model a distributed system as consisting of a fixed number of
 processes communicating solely by messages. In Agda, we postulate the
-number of processes \AgdaRef{n} as a natural number and the type of
-the messages \AgdaRef{Message}.
+number of processes \AgdaRef{n}\footnote{\ensuremath{\mathbb{N}} is
+the Agda type of natural numbers.} and the type of the messages
+\AgdaRef{Message}\footnote{Set is the Agda type of arbitrary types}:
 \begin{code}
 postulate
   n : ℕ
   Message : Set
 \end{code}
-In an abstract way, a process can be viewed as a sequence of events
-that take place on it, where events are sendings and receivings of
-messages. Similarly, an execution of a distributed system can be
-viewed as an collection of sequences of events of each process. We
-assume each process is assigned an unique identifier
-\AgdaRef{ProcessId}\footnote{Fin n is the Agda type of natural numbers
-less than n.} and each message is assigned a local identifier
-\AgdaRef{LocalEventId} that corresponds to the order it takes place on
-its originating process.
+In an abstract way, the history of a process can be viewed as a
+sequence of events that take place on it, where events are sendings
+and receivings of messages. Similarly, the history of one execution of
+a distributed system can be viewed as an collection of sequences of
+events of each process. We assume each process is assigned an unique
+identifier \AgdaRef{ProcessId}\footnote{Fin n is the Agda type of
+natural numbers less than n.} and each message is assigned a local
+identifier \AgdaRef{LocalEventId} that corresponds to the order it
+takes place on its originating process:
 \begin{code}
 ProcessId = Fin n
 LocalEventId = ℕ
 \end{code}
+\noindent As as result, we can identify
+a event by a product of its originating process's \AgdaRef{ProcessId}
+and its \AgdaRef{LocalEventId}.
+
+Events are related, one relation that we are in particular interested
+in is Lamport's happens-before relation that establishes an strict
+partial order on events:
+\begin{definition}[Happens-Before]
+  We say event $e$ happens before $e'$ if and only if:
+  \begin{enumerate}
+  \item $e$ and $e'$ occur on the same process and $e$ takes place before $e'$; or
+  \item $e$ is a sending event and $e'$ is the correspoinding receiving event; or
+  \item $e$ happens before $e''$ and $e''$ happens before $e'$ for any event $e''$.
+  \end{enumerate}
+\end{definition}
+\noindent Two distinct events $e$ and $e'$ are said to be concurrent
+if neither $e$ happens before or $e'$ happens before $e$.  It is
+well-known that the happens-before relation captures the potential
+causality of events in an execution.
+
+To decide if event $e$ happens before $e'$, one has to position the
+two events into a particular history and see if one of the three
+conditions of happens-before holds.  This requires us to define
+reachable histories, which is traditionally done as a state transition
+system.
 
 \section{Strong Clock Condition}
 
