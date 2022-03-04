@@ -58,7 +58,7 @@ zip⊔-monotonicˡ vc vc′ m = m≤m⊔n (vc′ m) (vc m)
 zip⊔-monotonicʳ : ∀ (vc : VC) (vc′ : VC) m  → vc m ≤ zipWith _⊔_ vc′ vc m
 zip⊔-monotonicʳ vc vc′ m = m≤n⊔m (vc′ m) (vc m)
 
- -- lemmas about VC
+-- lemmas about VC
 
 _≈_ : VC → VC → Set
 _≈_ = _≋_
@@ -113,51 +113,42 @@ pid≢i⇒vc[send[e]]i≡vc[e]i e _ i i≢pid = updateAt-minimal i pid[ e ] vc[ 
 pid≢i⇒vc[init]i≡0 : ∀ {pid} i → i ≢ pid → vc[ init {pid} ] i ≡ 0
 pid≢i⇒vc[init]i≡0 {pid} i i≢pid = updateAt-minimal i pid (replicate 0) i≢pid
 
-0<vc[e]pid[e] : 0 < vc[ e ] pid[ e ]
+0<vc[e]pid[e] : 0 < vc[ e ] pid[ e ] 
 0<vc[e]pid[e] {pid} e@{e = init}    = subst (0 <_) (sym vc[init]pid≡1) (s≤s z≤n)
 0<vc[e]pid[e] {pid} {e = send x e}  = subst (0 <_) (sym (updateAt-updates pid vc[ e ])) (<-trans (0<vc[e]pid[e]{e = e}) (s≤s ≤-refl))
 0<vc[e]pid[e] {pid} {e = recv e e′} = <-trans (<-transˡ (0<vc[e]pid[e] {e = e′}) (zip⊔-monotonicʳ vc[ e′ ] vc[ e ] pid)) (vc[e]pid⊔bv[e′]pid<vc[recv[e,e′]]pid e e′)
 
  -- Clock definition
+_≺′_ : Event pid eid →  Event pid′ eid′ → Set
+_≺′_  e e′ = vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] × e ≇ e′
 
-clock : Clock
-clock = record
-  { C        = VC
-  ; C[_]     = vc[_]
-  ; _≺_      = _≺_
-  ; ≺-trans  = ≺-trans
+≺′-irrefl : ¬ e ≺′ e
+≺′-irrefl (_ , x) = x refl
+
+clockCompare : ClockCompare
+clockCompare = record
+  { _≺_      = _≺′_
+  ; ≺-irrefl = ≺′-irrefl
   }
 
-open ⊏-PreservingRules
 open ⊏-DeterminingRules
 
-clock-⊏-preserving-rules : ⊏-PreservingRules clock
-⊏-preserving-rule₁ clock-⊏-preserving-rules {e = e} {m = m} = lemma , pid[ e ] , vc[e]pid<vc[send[e]]pid e m
-  where
-   lemma : Pointwise _≤_ vc[ e ] vc[ send m e ]
-   lemma i with i Fin.≟ pid[ e ]
-   ... | yes x rewrite x  = <⇒≤ (vc[e]pid<vc[send[e]]pid e m)
-   ... | no x rewrite pid≢i⇒vc[send[e]]i≡vc[e]i e m i x = ≤-refl 
-⊏-preserving-rule₂ clock-⊏-preserving-rules {e = e} {e′ = e′} = lemma , pid[ e ] , (vc[e′]pid<vc[recv[e,e′]]pid e′ e)
-  where
-   lemma : Pointwise _≤_ vc[ e ] vc[ recv e′ e ]
-   lemma i with i Fin.≟ pid[ e ]
-   ... | yes x rewrite x  = <⇒≤ (vc[e′]pid<vc[recv[e,e′]]pid e′ e ) 
-   ... | no x = pid≢i⇒vc[e′]i≤vc[recv[e,e′]]i e′ e i x
-⊏-preserving-rule₃ clock-⊏-preserving-rules {e = e} {e′ = e′} = lemma , pid[ e′ ] , (vc[e]pid<vc[recv[e,e′]]pid e e′)
-  where
-   lemma : Pointwise _≤_ vc[ e ] vc[ recv e e′ ]
-   lemma i with i Fin.≟ pid[ e′ ]
-   ... | yes x rewrite x  = <⇒≤ (vc[e]pid<vc[recv[e,e′]]pid e e′)
-   ... | no x = pid≢i⇒vc[e]i≤vc[recv[e,e′]]i e e′ i x
+clock-⊏-determining-rules : ⊏-DeterminingRules clockCompare
+⊏-determining-local clock-⊏-determining-rules {e′ = init} = {!!}
+⊏-determining-local clock-⊏-determining-rules {e′ = send x e′} = {!!}
+⊏-determining-local clock-⊏-determining-rules {e′ = recv e′ e′₁} = {!!}
+⊏-determining-init  (clock-⊏-determining-rules) = {!!}
+⊏-determining-send  (clock-⊏-determining-rules) = {!!}
+⊏-determining-recv  (clock-⊏-determining-rules) = {!!}
 
+-- sketch
 -- other lemmas about vc[_]
 
 ⊏-preserving-index : e ⊏ e′ →  vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
 ⊏-preserving-index {e = e} {e′ = send m e}  processOrder₁       = vc[e]pid<vc[send[e]]pid e m
 ⊏-preserving-index {e = e} {e′ = recv e′ e} processOrder₂      = vc[e′]pid<vc[recv[e,e′]]pid e′ e
 ⊏-preserving-index {e = e} {e′ = recv e e′} send⊏recv          = vc[e]pid<vc[recv[e,e′]]pid e e′
-⊏-preserving-index (trans {_} {_} {_} {_} {_} {_} {pid″} x y)  = <-transʳ (proj₁ ((⊏-PreservingRules-sufficient clock) clock-⊏-preserving-rules x) pid″) (⊏-preserving-index y)
+⊏-preserving-index (trans {_} {_} {_} {_} {_} {_} {pid″} x y)  = <-transʳ {!!} (⊏-preserving-index y)
 
 ⊏-determining-index : pid[ e ] ≢ pid[ e′ ] → vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] → e ⊏ e′
 ⊏-determining-index {e = e} e′@{e′ = init} x y = ⊥-elim (≤⇒≯ y (subst ( vc[ e ] pid[ e ] >_) z (0<vc[e]pid[e] {e = e})))
@@ -210,48 +201,6 @@ lemma₁ e (send m e′) x y = {!!}
 lemma₁ e (recv e′ e″) x y = {!!}
 
 -- current rules
-clock-⊏-determining-rules : ⊏-DeterminingRules clock
-⊏-determining-rule₁ clock-⊏-determining-rules {e = e} {e′ = e′} refl eid≤ (∀≤ , pid , p<p)
- with ⊏-tri-locally {e = e} {e′ = e′} refl
-... | inj₁ x        = ≤⇒≯ eid≤ (⊏⇒eid<-locally refl x)
-... | inj₂ (inj₁ refl) = <⇒≢ p<p refl
-... | inj₂ (inj₂ y) = ≤⇒≯ (∀≤ pid[ e ]) (⊏-preserving-index y)
--- possible lemma : ∀(e : Event pid eid) → vc[ e ] pid[ e ] ≡ eid[ e ]
-⊏-determining-rule₂ clock-⊏-determining-rules {e = e} e′@{e′ = init} pid≢ x (∀≤ , ∃<) = <⇒≱ (0<vc[e]pid[e] {e = e})(subst (_≥ vc[ e ] pid[ e ]) vc[e′]pid[e] (∀≤ pid[ e ]))
-  where
-    vc[e′]pid[e] : vc[ e′ ] pid[ e ] ≡ 0
-    vc[e′]pid[e] = updateAt-minimal pid[ e ] pid[ e′ ] (replicate 0) pid≢
--- ⊏-determining-rule₃ clock-⊏-determining-rules {e = e} {e′ = e′} {m = m} pid≢ x y = x e⊏e′
---   where
---     e⊏send[e′] : e ⊏ send m e′
---     e⊏send[e′] = ⊏-determining-index pid≢ (proj₁ y pid[ e ])
---     e⊏e′ : e ⊏ e′
---     e⊏e′ with ⊏-inv₁ e⊏send[e′] 
---     ... | inj₁ refl = ⊥-elim (pid≢ refl)
---     ... | inj₂ y = y
--- incomplete direct proof attempt
-⊏-determining-rule₃ clock-⊏-determining-rules {e = e} {e′ = e′} {m = m} pid≢ x y@(∀≤ , p , p<p) = {!!}
-  where
-    -- this lemma can simplify the proof
-    lemma : Pointwise _≤_ vc[ e ] vc[ e′ ]
-    lemma i with i Fin.≟ pid[ e′ ]
-    ... | yes refl = bar (subst (suc (vc[ e ] i) ≤_) (sym (updateAt-updates-suc i)) (lemma₁ e (send m e′)  pid≢ y))
-      where bar : ∀{a b} → suc a ≤ suc b → a ≤ b
-            bar (s≤s x) = x
-    lemma i | no z  = subst (vc[ e ] i ≤_) (updateAt-minimal i pid[ e′ ] vc[ e′ ] z) (∀≤ i)
-
--- maybe helpful? ∀ pid[ e ] ≢ pid[ e′ ] → e ⊏ e′ → ∃[ e″ ]recv e e″ ⊏  e′
-
-⊏-determining-rule₄ clock-⊏-determining-rules {e = e} {e′ = e′} {e″ = e″} pid≢ x y z w = x e⊏e′
-  where
-    e⊏recv[e″,e′] : e ⊏ recv e″ e′
-    e⊏recv[e″,e′] =  ⊏-determining-index pid≢ (proj₁ w pid[ e ])
-    e⊏e′ : e ⊏ e′
-    e⊏e′ with ⊏-inv₂ e⊏recv[e″,e′]
-    ... | inj₁ (inj₁ v) = ⊥-elim (z v)
-    ... | inj₁ (inj₂ v) = ⊥-elim (y v)
-    ... | inj₂ (inj₁ refl) = ⊥-elim (pid≢ refl)
-    ... | inj₂ (inj₂ v) = v
 
 postulate
   a : vc[ e ] ≺ vc[ e′ ] → vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
