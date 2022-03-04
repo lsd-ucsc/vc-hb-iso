@@ -1,0 +1,72 @@
+%%% -*-BibTeX-*-
+%%% Do NOT edit. File created by BibTeX with style
+%%% ACM-Reference-Format-Journals [18-Jan-2012].
+
+\begin{thebibliography}{3}
+
+%%% ====================================================================
+%%% NOTE TO THE USER: you can override these defaults by providing
+%%% customized versions of any of these macros before the \bibliography
+%%% command.  Each of them MUST provide its own final punctuation,
+%%% except for \shownote{}, \showDOI{}, and \showURL{}.  The latter two
+%%% do not use final punctuation, in order to avoid confusing it with
+%%% the Web address.
+%%%
+%%% To suppress output of a particular field, define its macro to expand
+%%% to an empty string, or better, \unskip, like this:
+%%%
+%%% \newcommand{\showDOI}[1]{\unskip}   % LaTeX syntax
+%%%
+%%% \def \showDOI #1{\unskip}           % plain TeX syntax
+%%%
+%%% ====================================================================
+
+\ifx \showCODEN    \undefined \def \showCODEN     #1{\unskip}     \fi
+\ifx \showDOI      \undefined \def \showDOI       #1{#1}\fi
+\ifx \showISBNx    \undefined \def \showISBNx     #1{\unskip}     \fi
+\ifx \showISBNxiii \undefined \def \showISBNxiii  #1{\unskip}     \fi
+\ifx \showISSN     \undefined \def \showISSN      #1{\unskip}     \fi
+\ifx \showLCCN     \undefined \def \showLCCN      #1{\unskip}     \fi
+\ifx \shownote     \undefined \def \shownote      #1{#1}          \fi
+\ifx \showarticletitle \undefined \def \showarticletitle #1{#1}   \fi
+\ifx \showURL      \undefined \def \showURL       {\relax}        \fi
+% The following commands are used for tagged output and should be
+% invisible to TeX
+\providecommand\bibfield[2]{#2}
+\providecommand\bibinfo[2]{#2}
+\providecommand\natexlab[1]{#1}
+\providecommand\showeprint[2][]{arXiv:#2}
+
+\bibitem[Fidge(1988)]%
+        {fidge-vector-time}
+\bibfield{author}{\bibinfo{person}{C.~J. Fidge}.}
+  \bibinfo{year}{1988}\natexlab{}.
+\newblock \showarticletitle{Timestamps in message-passing systems that preserve
+  the partial ordering}.
+\newblock \bibinfo{journal}{\emph{Proceedings of the 11th Australian Computer
+  Science Conference}} \bibinfo{volume}{10}, \bibinfo{number}{1}
+  (\bibinfo{year}{1988}), \bibinfo{pages}{56–66}.
+\newblock
+
+
+\bibitem[Mattern(1989)]%
+        {mattern-vector-time}
+\bibfield{author}{\bibinfo{person}{Friedemann Mattern}.}
+  \bibinfo{year}{1989}\natexlab{}.
+\newblock \showarticletitle{Virtual Time and Global States of Distributed
+  Systems}. In \bibinfo{booktitle}{\emph{Parallel and Distributed Algorithms}}.
+  \bibinfo{publisher}{North-Holland}, \bibinfo{pages}{215--226}.
+\newblock
+
+
+\bibitem[Schmuck(1988)]%
+        {schmuck-dissertation}
+\bibfield{author}{\bibinfo{person}{Frank~B Schmuck}.}
+  \bibinfo{year}{1988}\natexlab{}.
+\newblock \emph{\bibinfo{title}{The use of efficient broadcast protocols in
+  asynchronous distributed systems}}.
+\newblock \bibinfo{thesistype}{Ph.\,D. Dissertation}.
+\newblock
+
+
+\end{thebibliography}
