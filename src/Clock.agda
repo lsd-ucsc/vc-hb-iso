@@ -70,16 +70,16 @@ module _ (c : ClockCompare) where
   ...         | inj₂ (inj₂ y)    = ⊥-elim (⊏-determining-local rules refl y x)
 
   postulate
-      ⊏-preservng : e ⊏ e′ → e ≺ e′
+      ⊏-preserving : e ⊏ e′ → e ≺ e′
       
   ⊏-DeterminingRules-necessary : ⊏-Determining → ⊏-DeterminingRules
   ⊏-determining-local (⊏-DeterminingRules-necessary x) y z w   = ⊏-asym (x w) z
   ⊏-determining-init (⊏-DeterminingRules-necessary x) y refl w = ¬e⊏init refl (x w)
   ⊏-determining-send (⊏-DeterminingRules-necessary x) y z with ⊏-inv₁ (x z)
   ... | inj₁ refl = ⊥-elim (y refl)
-  ... | inj₂ y₁ = ⊏-preservng y₁
+  ... | inj₂ y₁ = ⊏-preserving y₁
   ⊏-determining-recv  (⊏-DeterminingRules-necessary x) y z with ⊏-inv₂ (x z)
   ... | inj₁ (inj₁ w) = inj₂ (inj₂ w)
-  ... | inj₁ (inj₂ w) = inj₂ (inj₁ (⊏-preservng w))
+  ... | inj₁ (inj₂ w) = inj₂ (inj₁ (⊏-preserving w))
   ... | inj₂ (inj₁ refl) = ⊥-elim (y refl)
-  ... | inj₂ (inj₂ w) = inj₁ (⊏-preservng w)
+  ... | inj₂ (inj₂ w) = inj₁ (⊏-preserving w)

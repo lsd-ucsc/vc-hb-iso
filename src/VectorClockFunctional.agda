@@ -58,29 +58,6 @@ zip⊔-monotonicˡ vc vc′ m = m≤m⊔n (vc′ m) (vc m)
 zip⊔-monotonicʳ : ∀ (vc : VC) (vc′ : VC) m  → vc m ≤ zipWith _⊔_ vc′ vc m
 zip⊔-monotonicʳ vc vc′ m = m≤n⊔m (vc′ m) (vc m)
 
--- lemmas about VC
-
-_≈_ : VC → VC → Set
-_≈_ = _≋_
-
-≈-refl : vc ≈ vc
-≈-refl = ≋-refl
-
-_≺_ : VC → VC → Set
-vc ≺ vc′ = Pointwise _≤_ vc vc′ × ∃[ pid ] vc pid < vc′ pid
-
-≺-irrefl : ¬ vc ≺ vc
-≺-irrefl (_ , _ , x) = <-irrefl refl x
-
-≺-trans : vc ≺ vc′ → vc′ ≺ vc″ → vc ≺ vc″
-≺-trans (x , _) (y , z , w) = (λ i → ≤-trans (x i) (y i)) , z , <-transʳ (x z) w
-
-vc[p]-<⇒≇ : ∀ pid → vc pid < vc′ pid → vc ≇ vc′
-vc[p]-<⇒≇ pid vc[pid]<vc′[pid] vc≅vc′ = <⇒≢ vc[pid]<vc′[pid] (cong-app (≅-to-≡ vc≅vc′) pid)
-
-vc-≺⇒≇ : vc ≺ vc′ → vc ≇ vc′
-vc-≺⇒≇ (_ , pid , vc[pid]<vc′[pid] ) vc≅vc′ = vc[p]-<⇒≇ pid vc[pid]<vc′[pid] vc≅vc′
-
  -- lemmas about vc[_]
 
 vc[e]pid⊔bv[e′]pid<vc[recv[e,e′]]pid : ∀ {pid pid′ eid eid′} (e : Event pid eid) (e′ : Event pid′ eid′) → vc[ e ] pid[ e′ ] ⊔ vc[ e′ ] pid[ e′ ] < vc[ recv e e′ ] pid[ e′ ]
@@ -119,16 +96,34 @@ pid≢i⇒vc[init]i≡0 {pid} i i≢pid = updateAt-minimal i pid (replicate 0) i
 0<vc[e]pid[e] {pid} {e = recv e e′} = <-trans (<-transˡ (0<vc[e]pid[e] {e = e′}) (zip⊔-monotonicʳ vc[ e′ ] vc[ e ] pid)) (vc[e]pid⊔bv[e′]pid<vc[recv[e,e′]]pid e e′)
 
  -- Clock definition
-_≺′_ : Event pid eid →  Event pid′ eid′ → Set
-_≺′_  e e′ = vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] × e ≇ e′
+_≺_ : VC → VC → Set
+vc ≺ vc′ = Pointwise _≤_ vc vc′ × ∃[ pid ] vc pid < vc′ pid
 
-≺′-irrefl : ¬ e ≺′ e
-≺′-irrefl (_ , x) = x refl
+≺-irrefl : ¬ vc ≺ vc
+≺-irrefl (_ , _ , x) = <-irrefl refl x
+
+≺-trans : vc ≺ vc′ → vc′ ≺ vc″ → vc ≺ vc″
+≺-trans (x , _) (y , z , w) = (λ i → ≤-trans (x i) (y i)) , z , <-transʳ (x z) w
+
+vc[p]-<⇒≇ : ∀ pid → vc pid < vc′ pid → vc ≇ vc′
+vc[p]-<⇒≇ pid vc[pid]<vc′[pid] vc≅vc′ = <⇒≢ vc[pid]<vc′[pid] (cong-app (≅-to-≡ vc≅vc′) pid)
+
+vc-≺⇒≇ : vc ≺ vc′ → vc ≇ vc′
+vc-≺⇒≇ (_ , pid , vc[pid]<vc′[pid] ) vc≅vc′ = vc[p]-<⇒≇ pid vc[pid]<vc′[pid] vc≅vc′
+
+_≺⁻_ : Event pid eid →  Event pid′ eid′ → Set
+_≺⁻_  e e′ = vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] × e ≇ e′
+
+≺⁻-irrefl : ¬ e ≺⁻ e
+≺⁻-irrefl (_ , x) = x refl
+
+≺⇒≺⁻ : vc[ e ] ≺ vc[ e′ ] → e ≺⁻ e′
+≺⇒≺⁻ {e = e} (∀≤ , p , p<) = (∀≤ pid[ e ]) , λ{refl → <⇒≢ p< refl}
 
 clockCompare : ClockCompare
 clockCompare = record
-  { _≺_      = _≺′_
-  ; ≺-irrefl = ≺′-irrefl
+  { _≺_      = _≺⁻_
+  ; ≺-irrefl = ≺⁻-irrefl
   }
 
 open ⊏-DeterminingRules
