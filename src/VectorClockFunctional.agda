@@ -133,47 +133,24 @@ clockCompare = record
 
 open ⊏-DeterminingRules
 
-clock-⊏-determining-rules : ⊏-DeterminingRules clockCompare
-⊏-determining-local clock-⊏-determining-rules {e′ = init} = {!!}
-⊏-determining-local clock-⊏-determining-rules {e′ = send x e′} = {!!}
-⊏-determining-local clock-⊏-determining-rules {e′ = recv e′ e′₁} = {!!}
-⊏-determining-init  (clock-⊏-determining-rules) = {!!}
-⊏-determining-send  (clock-⊏-determining-rules) = {!!}
-⊏-determining-recv  (clock-⊏-determining-rules) = {!!}
-
--- sketch
--- other lemmas about vc[_]
-
 ⊏-preserving-index : e ⊏ e′ →  vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
 ⊏-preserving-index {e = e} {e′ = send m e}  processOrder₁       = vc[e]pid<vc[send[e]]pid e m
 ⊏-preserving-index {e = e} {e′ = recv e′ e} processOrder₂      = vc[e′]pid<vc[recv[e,e′]]pid e′ e
 ⊏-preserving-index {e = e} {e′ = recv e e′} send⊏recv          = vc[e]pid<vc[recv[e,e′]]pid e e′
 ⊏-preserving-index (trans {_} {_} {_} {_} {_} {_} {pid″} x y)  = <-transʳ {!!} (⊏-preserving-index y)
 
-⊏-determining-index : pid[ e ] ≢ pid[ e′ ] → vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] → e ⊏ e′
-⊏-determining-index {e = e} e′@{e′ = init} x y = ⊥-elim (≤⇒≯ y (subst ( vc[ e ] pid[ e ] >_) z (0<vc[e]pid[e] {e = e})))
-  where
-   z : 0 ≡ vc[ e′ ] pid[ e ]
-   z = sym (pid≢i⇒vc[init]i≡0 pid[ e ] x)
-⊏-determining-index {e = e} {e′ = send m e′} x y = trans (⊏-determining-index x (subst (vc[ e ] pid[ e ] ≤_) z y)) processOrder₁
-  where
-   z : vc[ send m e′ ] pid[ e ] ≡ vc[ e′ ] pid[ e ]
-   z = pid≢i⇒vc[send[e]]i≡vc[e]i e′ m pid[ e ] x
-⊏-determining-index {e = e} {e′ = recv e″ e′} x y
-  with z ← subst ( vc[ e ] pid[ e ] ≤_ ) (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x)) y -- vc[ e ] pid[ e ] ≤ vc[ e″ ] pid[ e ] ⊔ vc[ e′ ] pid[ e ]
-  with vc[ e″ ] pid[ e ] ≤? vc[ e′ ] pid[ e ]
-...| yes w
-     with u ← subst ( vc[ e ] pid[ e ] ≤_ ) (m≤n⇒m⊔n≡n w) z -- vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] 
-     = trans (⊏-determining-index x u) processOrder₂
-...| no w
-     with u ← subst ( vc[ e ] pid[ e ] ≤_ ) (m≥n⇒m⊔n≡m (<⇒≤ (≰⇒> w))) z -- vc[ e ] pid[ e ] ≤ vc[ e″ ] pid[ e ]  
-     with pid[ e ] Fin.≟ pid[ e″ ]
-...   | no v = trans (⊏-determining-index v u) send⊏recv
-...   | yes refl with ⊏-tri-locally {e = e} {e′ = e″} refl 
-...            | inj₁ v = trans v send⊏recv
-...            | inj₂ (inj₁ refl) = send⊏recv
-...            | inj₂ (inj₂ v) = ⊥-elim (<⇒≱ (⊏-preserving-index v) u)
+clock-⊏-determining-rules : ⊏-DeterminingRules clockCompare
+⊏-determining-local clock-⊏-determining-rules x y (z , _) = <⇒≱ (⊏-preserving-index y) z
+⊏-determining-init  clock-⊏-determining-rules {e = e} {e′ = e′} x refl (z , _) = <⇒≱ (0<vc[e]pid[e] {e = e}) (subst ( vc[ e ] pid[ e ] ≤_) (pid≢i⇒vc[init]i≡0 pid[ e ] x) z)
+⊏-determining-send  clock-⊏-determining-rules {e = e} {e′ = e′} {m = m} x (z , _) = (subst (vc[ e ] pid[ e ] ≤_) (pid≢i⇒vc[send[e]]i≡vc[e]i e′ m pid[ e ] x) z) , λ{refl → x refl}
+⊏-determining-recv  clock-⊏-determining-rules {e = e} {e′ = e′} {e″ = e″} x (z , _)
+  with vc[ e″ ] pid[ e ] <? vc[ e′ ] pid[ e ]
+... | yes w  = inj₁ (subst (vc[ e ] pid[ e ] ≤_) (Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x)) (m≤n⇒m⊔n≡n (<⇒≤ w))) z , λ{refl → x refl})
+... | no  w  with ≅-dec {e = e} {e′ = e″}
+...           | inj₁ v = inj₂ (inj₂ v)
+...           | inj₂ v = inj₂ (inj₁ ((subst (vc[ e ] pid[ e ] ≤_) (Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x))(m≥n⇒m⊔n≡m (≮⇒≥ w))) z) , v))
 
+-- sketch
 -- potential determining rules?
 ⊏-determining-index-init : pid[ e ] ≢ pid[ e′ ] → e′ ≡ init → vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] → e ⊏ e′
 ⊏-determining-index-init {e = e} {e′ = e′} x refl y = ⊥-elim (≤⇒≯ y (subst ( vc[ e ] pid[ e ] >_) z (0<vc[e]pid[e] {e = e})))

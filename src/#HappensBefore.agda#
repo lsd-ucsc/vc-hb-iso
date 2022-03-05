@@ -94,7 +94,7 @@ eid<⇒⊏-locally {_} {eid} {e} {_} {suc eid′} {recv _ e′} x y with <-cmp e
 ⊏-inv₁ (trans x y) with ⊏-inv₁ y
 ... | inj₁ refl = inj₂ x
 ... | inj₂ z    = inj₂ (trans x z)
-
+f
 ⊏-inv₂ : e ⊏ recv e′ e″ → (e ≅ e′ ⊎ e ⊏ e′) ⊎ (e ≅ e″ ⊎ e ⊏ e″)
 ⊏-inv₂ processOrder₂ = inj₂ (inj₁ refl)
 ⊏-inv₂ send⊏recv     = inj₁ (inj₁ refl)
