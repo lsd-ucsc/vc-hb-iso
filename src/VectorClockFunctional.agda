@@ -111,6 +111,40 @@ vc[p]-<⇒≇ pid vc[pid]<vc′[pid] vc≅vc′ = <⇒≢ vc[pid]<vc′[pid] (co
 vc-≺⇒≇ : vc ≺ vc′ → vc ≇ vc′
 vc-≺⇒≇ (_ , pid , vc[pid]<vc′[pid] ) vc≅vc′ = vc[p]-<⇒≇ pid vc[pid]<vc′[pid] vc≅vc′
 
+ -- Preserving
+
+clock : Clock
+clock = record
+  { C        = VC
+  ; C[_]     = vc[_]
+  ; _≺_      = _≺_
+  ; ≺-trans  = ≺-trans
+  }
+
+open ⊏-PreservingRules
+
+clock-⊏-preserving-rules : ⊏-PreservingRules clock
+⊏-preserving-rule₁ clock-⊏-preserving-rules {e = e} {m = m} = lemma , pid[ e ] , vc[e]pid<vc[send[e]]pid e m
+  where
+   lemma : Pointwise _≤_ vc[ e ] vc[ send m e ]
+   lemma i with i Fin.≟ pid[ e ]
+   ... | yes x rewrite x  = <⇒≤ (vc[e]pid<vc[send[e]]pid e m)
+   ... | no x rewrite pid≢i⇒vc[send[e]]i≡vc[e]i e m i x = ≤-refl 
+⊏-preserving-rule₂ clock-⊏-preserving-rules {e = e} {e′ = e′} = lemma , pid[ e ] , (vc[e′]pid<vc[recv[e,e′]]pid e′ e)
+  where
+   lemma : Pointwise _≤_ vc[ e ] vc[ recv e′ e ]
+   lemma i with i Fin.≟ pid[ e ]
+   ... | yes x rewrite x  = <⇒≤ (vc[e′]pid<vc[recv[e,e′]]pid e′ e ) 
+   ... | no x = pid≢i⇒vc[e′]i≤vc[recv[e,e′]]i e′ e i x
+⊏-preserving-rule₃ clock-⊏-preserving-rules {e = e} {e′ = e′} = lemma , pid[ e′ ] , (vc[e]pid<vc[recv[e,e′]]pid e e′)
+  where
+   lemma : Pointwise _≤_ vc[ e ] vc[ recv e e′ ]
+   lemma i with i Fin.≟ pid[ e′ ]
+   ... | yes x rewrite x  = <⇒≤ (vc[e]pid<vc[recv[e,e′]]pid e e′)
+   ... | no x = pid≢i⇒vc[e]i≤vc[recv[e,e′]]i e e′ i x
+
+ -- Determining
+ 
 _≺⁻_ : Event pid eid →  Event pid′ eid′ → Set
 _≺⁻_  e e′ = vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] × e ≇ e′
 
@@ -126,63 +160,22 @@ clockCompare = record
   ; ≺-irrefl = ≺⁻-irrefl
   }
 
-open ⊏-DeterminingRules
+open ⊏-ReflectingRules
 
 ⊏-preserving-index : e ⊏ e′ →  vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
 ⊏-preserving-index {e = e} {e′ = send m e}  processOrder₁       = vc[e]pid<vc[send[e]]pid e m
 ⊏-preserving-index {e = e} {e′ = recv e′ e} processOrder₂      = vc[e′]pid<vc[recv[e,e′]]pid e′ e
 ⊏-preserving-index {e = e} {e′ = recv e e′} send⊏recv          = vc[e]pid<vc[recv[e,e′]]pid e e′
-⊏-preserving-index (trans {_} {_} {_} {_} {_} {_} {pid″} x y)  = <-transʳ {!!} (⊏-preserving-index y)
+⊏-preserving-index (trans {_} {_} {_} {_} {_} {_} {pid″} x y)  = <-transʳ ((proj₁ ((⊏-PreservingRules-sufficient clock) clock-⊏-preserving-rules x) pid″)) (⊏-preserving-index y)
 
-clock-⊏-determining-rules : ⊏-DeterminingRules clockCompare
-⊏-determining-local clock-⊏-determining-rules x y (z , _) = <⇒≱ (⊏-preserving-index y) z
-⊏-determining-init  clock-⊏-determining-rules {e = e} {e′ = e′} x refl (z , _) = <⇒≱ (0<vc[e]pid[e] {e = e}) (subst ( vc[ e ] pid[ e ] ≤_) (pid≢i⇒vc[init]i≡0 pid[ e ] x) z)
-⊏-determining-send  clock-⊏-determining-rules {e = e} {e′ = e′} {m = m} x (z , _) = (subst (vc[ e ] pid[ e ] ≤_) (pid≢i⇒vc[send[e]]i≡vc[e]i e′ m pid[ e ] x) z) , λ{refl → x refl}
-⊏-determining-recv  clock-⊏-determining-rules {e = e} {e′ = e′} {e″ = e″} x (z , _)
+clock-⊏-reflecting-rules : ⊏-ReflectingRules clockCompare
+⊏-reflecting-local clock-⊏-reflecting-rules x y (z , _) = <⇒≱ (⊏-preserving-index y) z
+⊏-reflecting-init  clock-⊏-reflecting-rules {e = e} {e′ = e′} x refl (z , _) = <⇒≱ (0<vc[e]pid[e] {e = e}) (subst ( vc[ e ] pid[ e ] ≤_) (pid≢i⇒vc[init]i≡0 pid[ e ] x) z)
+⊏-reflecting-send  clock-⊏-reflecting-rules {e = e} {e′ = e′} {m = m} x (z , _) = (subst (vc[ e ] pid[ e ] ≤_) (pid≢i⇒vc[send[e]]i≡vc[e]i e′ m pid[ e ] x) z) , λ{refl → x refl}
+⊏-reflecting-recv  clock-⊏-reflecting-rules {e = e} {e′ = e′} {e″ = e″} x (z , _)
   with vc[ e″ ] pid[ e ] <? vc[ e′ ] pid[ e ]
 ... | yes w  = inj₁ (subst (vc[ e ] pid[ e ] ≤_) (Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x)) (m≤n⇒m⊔n≡n (<⇒≤ w))) z , λ{refl → x refl})
 ... | no  w  with ≅-dec {e = e} {e′ = e″}
 ...           | inj₁ v = inj₂ (inj₂ v)
 ...           | inj₂ v = inj₂ (inj₁ ((subst (vc[ e ] pid[ e ] ≤_) (Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x))(m≥n⇒m⊔n≡m (≮⇒≥ w))) z) , v))
-
--- sketch
--- potential determining rules?
-⊏-determining-index-init : pid[ e ] ≢ pid[ e′ ] → e′ ≡ init → vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] → e ⊏ e′
-⊏-determining-index-init {e = e} {e′ = e′} x refl y = ⊥-elim (≤⇒≯ y (subst ( vc[ e ] pid[ e ] >_) z (0<vc[e]pid[e] {e = e})))
-  where
-   z : 0 ≡ vc[ e′ ] pid[ e ]
-   z = sym (pid≢i⇒vc[init]i≡0 pid[ e ] x)
-⊏-determining-index-recv : pid[ e ] ≢ pid[ e′ ] → vc[ e ] pid[ e ] ≤ vc[ recv e″ e′ ] pid[ e ] → e ⊏ e′
-⊏-determining-index-send : pid[ e ] ≢ pid[ e′ ] → vc[ e ] pid[ e ] ≤ vc[ send m e′ ] pid[ e ] → e ⊏ e′
-
-⊏-determining-index-send {e = e} e′@{e′ = init}       {m = m} x y rewrite pid≢i⇒vc[send[e]]i≡vc[e]i e′ m pid[ e ] x = ⊏-determining-index-init x refl y
-⊏-determining-index-send {e = e} e′@{e′ = send m″ e″} {m = m} x y rewrite pid≢i⇒vc[send[e]]i≡vc[e]i e′ m pid[ e ] x = trans (⊏-determining-index-send {m = m} x y) processOrder₁
-⊏-determining-index-send {e = e} e′@{e′ = recv e″ e‴} {m = m} x y rewrite pid≢i⇒vc[send[e]]i≡vc[e]i e′ m pid[ e ] x = trans (⊏-determining-index-recv {e″ = e″} x y) processOrder₂
-
-⊏-determining-index-recv {e = e} e′@{e′ = init}       {e″ = e″} x y = {!!}
-⊏-determining-index-recv {e = e} e′@{e′ = send m e‴}  {e″ = e″} x y = {!!}
-⊏-determining-index-recv {e = e} e′@{e′ = recv e⁗ e‴} {e″ = e″} x y = {!!}
-
-lemma₁ : ∀ (e : Event pid eid) (e′ : Event pid′ eid′) →
-         pid[ e ] ≢ pid[ e′ ] → vc[ e ] ≺ vc[ e′ ] → vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
-lemma₁ e e′@init x (∀≤ , _) = ⊥-elim (≤⇒≯ (∀≤ pid[ e ]) (subst ( vc[ e ] pid[ e ] >_) z (0<vc[e]pid[e] {e = e})))
-  where
-   z : 0 ≡ vc[ e′ ] pid[ e ]
-   z = sym (pid≢i⇒vc[init]i≡0 pid[ e ] x)
-lemma₁ e (send m e′) x y = {!!}
-lemma₁ e (recv e′ e″) x y = {!!}
-
--- current rules
-
-postulate
-  a : vc[ e ] ≺ vc[ e′ ] → vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
-  b : pid[ e ] ≢ pid[ e′ ] → vc[ e ] pid[ e′ ] < vc[ send m e′ ] pid[ e′ ] →  vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
-  
-experiment : pid[ e ] ≢ pid[ e′ ] → vc[ e ] ≺ vc[ send m e′ ] →  vc[ e ] ≺ vc[ e′ ]
-experiment {e = e} e′@{e′ = init} {m = m} pid≢ (∀≤ , _) = ⊥-elim (<⇒≱ (0<vc[e]pid[e] {e = e}) (x pid[ e ] pid≢))
-  where
-    x : ∀ i → i ≢ pid[ e′ ] → vc[ e ] i ≤ 0
-    x i i≢ = subst (vc[ e ] i ≤_) (Eq.trans (pid≢i⇒vc[send[e]]i≡vc[e]i e′ m i i≢) (pid≢i⇒vc[init]i≡0 i i≢)) (∀≤ i)
-experiment {e = e} {e′ = send m e′} pid≢ x = {!x!}
-experiment {e′ = recv e′ e′₁} pid≢ x = {!!}
 
