@@ -43,7 +43,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 open import Relation.Nullary using (¬_; yes; no)
 \end{code}
 
-\title{Formalizing Vector Clocks in Agda (Functional Pearl)}
+\title{Formalizing Vector Clocks in Agda}
 
 \author{Gan Shen}
 \affiliation{\institution{University of California, Santa Cruz} \country{USA}}
@@ -53,14 +53,7 @@ open import Relation.Nullary using (¬_; yes; no)
 \affiliation{\institution{University of California, Santa Cruz} \country{USA}}
 
 \begin{abstract}
-Distributed systems are hard to build partly because the lack of
-physically synchronous global clocks makes reasoning about causality
-sometimes impossible. To this end, vector logical clocks have been
-proposed and proved to capture causality, in particular, they preserve
-and determin the happens-before relation. However, most of the proofs
-are done informally on paper.
-
-In this paper...
+  TBD
 \end{abstract}
 
 \begin{document}
@@ -68,6 +61,18 @@ In this paper...
 \maketitle
 
 \section{Introduction}
+A distributed system is a group of connected computers that programmed
+to do a specific task. By having multiple computers located at
+different places working together, it increases the overrall
+throughput, data locality, as well as fault tolerance. However, it
+also makes reasoning about programs harder in that our common
+persception that events happen in a total order no longer hold ---
+events can be concurrent and it is not obvious how to order events
+from different processes.
+
+One widely used order proposed to solve this problem is Lamport's
+happens-before relation, or (potentially) casuality relation because
+it tracks (potential) casaulity between events.
 
 \section{System Model}
 We model a distributed system as consisting of a fixed number of
