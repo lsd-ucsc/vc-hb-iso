@@ -61,18 +61,20 @@ open import Relation.Nullary using (¬_; yes; no)
 \maketitle
 
 \section{Introduction}
-A distributed system is a group of connected computers that programmed
-to do a specific task. By having multiple computers located at
-different places working together, it increases the overrall
-throughput, data locality, as well as fault tolerance. However, it
-also makes reasoning about programs harder in that our common
-persception that events happen in a total order no longer hold ---
-events can be concurrent and it is not obvious how to order events
-from different processes.
+A distributed system is a group of connected computers that are
+programmed to do a specific task; these computers are usually
+spatially separated and communicate only by exchanging messages. By
+having multiple computers located at different places working
+together, it increases system throughput, data locality, as well as
+fault tolerance. However, it also makes reasoning about programs
+harder in that our common persception that events happen in a total
+order no longer hold---events can be concurrent and it is not obvious
+how to order events from different processes.
 
-One widely used order proposed to solve this problem is Lamport's
-happens-before relation, or (potentially) casuality relation because
-it tracks (potential) casaulity between events.
+One widely used order proposed to solve this problem is Leslie
+Lamport's happens-before relation~\cite{lamport1978}, or (potentially)
+causality relation because it tracks (potential) causality between
+events.
 
 \section{System Model}
 We model a distributed system as consisting of a fixed number of
