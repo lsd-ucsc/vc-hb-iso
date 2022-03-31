@@ -143,9 +143,15 @@ clock-⊏-preserving-rules : ⊏-PreservingRules clock
    ... | yes x rewrite x  = <⇒≤ (vc[e]pid<vc[recv[e,e′]]pid e e′)
    ... | no x = pid≢i⇒vc[e]i≤vc[recv[e,e′]]i e e′ i x
 
- -- Determining
- 
-_≺⁻_ : Event pid eid →  Event pid′ eid′ → Set
+ -- Reflecting
+
+⊏-preserving-index : e ⊏ e′ →  vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
+⊏-preserving-index {e = e} {e′ = send m e}  processOrder₁       = vc[e]pid<vc[send[e]]pid e m
+⊏-preserving-index {e = e} {e′ = recv e′ e} processOrder₂      = vc[e′]pid<vc[recv[e,e′]]pid e′ e
+⊏-preserving-index {e = e} {e′ = recv e e′} send⊏recv          = vc[e]pid<vc[recv[e,e′]]pid e e′
+⊏-preserving-index (trans {_} {_} {_} {_} {_} {_} {pid″} x y)  = <-transʳ ((proj₁ ((⊏-PreservingRules-sufficient clock) clock-⊏-preserving-rules x) pid″)) (⊏-preserving-index y)
+
+_≺⁻_ : ClockCompare
 _≺⁻_  e e′ = vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] × e ≇ e′
 
 ≺⁻-irrefl : ¬ e ≺⁻ e
@@ -154,28 +160,24 @@ _≺⁻_  e e′ = vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] × e ≇ e′
 ≺⇒≺⁻ : vc[ e ] ≺ vc[ e′ ] → e ≺⁻ e′
 ≺⇒≺⁻ {e = e} (∀≤ , p , p<) = (∀≤ pid[ e ]) , λ{refl → <⇒≢ p< refl}
 
-clockCompare : ClockCompare
-clockCompare = record
-  { _≺_      = _≺⁻_
-  ; ≺-irrefl = ≺⁻-irrefl
-  }
-
-open ⊏-ReflectingRules
-
-⊏-preserving-index : e ⊏ e′ →  vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
-⊏-preserving-index {e = e} {e′ = send m e}  processOrder₁       = vc[e]pid<vc[send[e]]pid e m
-⊏-preserving-index {e = e} {e′ = recv e′ e} processOrder₂      = vc[e′]pid<vc[recv[e,e′]]pid e′ e
-⊏-preserving-index {e = e} {e′ = recv e e′} send⊏recv          = vc[e]pid<vc[recv[e,e′]]pid e e′
-⊏-preserving-index (trans {_} {_} {_} {_} {_} {_} {pid″} x y)  = <-transʳ ((proj₁ ((⊏-PreservingRules-sufficient clock) clock-⊏-preserving-rules x) pid″)) (⊏-preserving-index y)
-
-clock-⊏-reflecting-rules : ⊏-ReflectingRules clockCompare
-⊏-reflecting-local clock-⊏-reflecting-rules x y (z , _) = <⇒≱ (⊏-preserving-index y) z
-⊏-reflecting-init  clock-⊏-reflecting-rules {e = e} {e′ = e′} x refl (z , _) = <⇒≱ (0<vc[e]pid[e] {e = e}) (subst ( vc[ e ] pid[ e ] ≤_) (pid≢i⇒vc[init]i≡0 pid[ e ] x) z)
-⊏-reflecting-send  clock-⊏-reflecting-rules {e = e} {e′ = e′} {m = m} x (z , _) = (subst (vc[ e ] pid[ e ] ≤_) (pid≢i⇒vc[send[e]]i≡vc[e]i e′ m pid[ e ] x) z) , λ{refl → x refl}
-⊏-reflecting-recv  clock-⊏-reflecting-rules {e = e} {e′ = e′} {e″ = e″} x (z , _)
-  with vc[ e″ ] pid[ e ] <? vc[ e′ ] pid[ e ]
-... | yes w  = inj₁ (subst (vc[ e ] pid[ e ] ≤_) (Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x)) (m≤n⇒m⊔n≡n (<⇒≤ w))) z , λ{refl → x refl})
-... | no  w  with ≅-dec {e = e} {e′ = e″}
-...           | inj₁ v = inj₂ (inj₂ v)
-...           | inj₂ v = inj₂ (inj₁ ((subst (vc[ e ] pid[ e ] ≤_) (Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x))(m≥n⇒m⊔n≡m (≮⇒≥ w))) z) , v))
-
+⊏-reflectingRule : ⊏-ReflectingRule _≺⁻_
+⊏-reflectingRule (⊏̸-eid {e = e} {e′ = e′} x y) (z , w) with m≤n⇒m<n∨m≡n y
+... | inj₁ u = <⇒≱ (⊏-preserving-index {e = e′} {e′ = e} (eid<⇒⊏-locally (sym x) u )) z
+... | inj₂ u = w (uniquely-identify x (sym u))
+⊏-reflectingRule (⊏̸-init {e = e} x refl) (z , _) = <⇒≱ ((0<vc[e]pid[e] {e = e})) (subst ( vc[ e ] pid[ e ] ≤_) ((pid≢i⇒vc[init]i≡0 pid[ e ] x)) z)
+⊏-reflectingRule (⊏̸-send {e = e} {e′ = e′} {m = m} x y) (z , _) = ⊏-reflectingRule y (u , (λ {refl → x refl}))
+ where
+   u : vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ]
+   u = subst (vc[ e ] pid[ e ] ≤_) (pid≢i⇒vc[send[e]]i≡vc[e]i e′ m pid[ e ] x) z
+⊏-reflectingRule (⊏̸-recv  {e = e} {e′ = e′} {e″ = e″} x y z w) (u , _)
+   with vc[ e″ ] pid[ e ] <? vc[ e′ ] pid[ e ]
+... | yes v = ⊏-reflectingRule y ((subst (vc[ e ] pid[ e ] ≤_) s u) , (λ {refl → x refl}))
+ where
+  s : vc[ recv e″ e′ ] pid[ e ] ≡ vc[ e′ ] pid[ e ]
+  s = Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x)) (m≤n⇒m⊔n≡n (<⇒≤ v))
+... | no  v  with ≅-dec {e = e} {e′ = e″}
+...           | inj₁ t = w t
+...           | inj₂ t = ⊏-reflectingRule z ((subst (vc[ e ] pid[ e ] ≤_) s u) , t)
+ where
+  s : vc[ recv e″ e′ ] pid[ e ] ≡ vc[ e″ ] pid[ e ]
+  s = Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x)) (m≥n⇒m⊔n≡m (≮⇒≥ v) ) 
