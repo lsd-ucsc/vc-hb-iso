@@ -1,3 +1,4 @@
+
 module VectorClockFunctional where
 
 open import Postulates
@@ -145,7 +146,7 @@ clock-⊏-preserving-rules : ⊏-PreservingRules clock
    ... | no x = pid≢i⇒vc[e]i≤vc[recv[e,e′]]i e e′ i x
 
  -- Reflecting
- 
+
 ⊏-preserving-index : e ⊏ e′ →  vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
 ⊏-preserving-index {e = e} {e′ = send m e}  processOrder₁       = vc[e]pid<vc[send[e]]pid e m
 ⊏-preserving-index {e = e} {e′ = recv e′ e} processOrder₂      = vc[e′]pid<vc[recv[e,e′]]pid e′ e
@@ -181,4 +182,4 @@ _≺⁻_  e e′ = vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] × e ≇ e′
 ...           | inj₂ t = ⊏-reflectingRule z ((subst (vc[ e ] pid[ e ] ≤_) s u) , t)
  where
   s : vc[ recv e″ e′ ] pid[ e ] ≡ vc[ e″ ] pid[ e ]
-  s = Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x)) (m≥n⇒m⊔n≡m (≮⇒≥ v)) 
+  s = Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x)) (m≥n⇒m⊔n≡m (≮⇒≥ v))
