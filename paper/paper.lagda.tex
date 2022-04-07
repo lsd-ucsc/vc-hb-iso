@@ -53,7 +53,15 @@ open import Relation.Nullary using (¬_; yes; no)
 \affiliation{\institution{University of California, Santa Cruz} \country{USA}}
 
 \begin{abstract}
-  TBD
+  Vector clocks are widely used in distributed systems to track
+  causality among events because they precisely characterize the
+  happens-before relation. Depite the popular usage, there is rarely
+  any formal proof of its correctness. In this paper, we present a
+  formal proof in Agda that shows the isomorphism between vector
+  clocks and the happens-before relation. To do so, we first define a
+  model of distributed systems that allows us to reason about the
+  happens-before relation; then we define how to assign vector clocks
+  to events in this model; finally we present the isomorphism proof.
 \end{abstract}
 
 \begin{document}
@@ -74,7 +82,17 @@ how to order events from different processes.
 One widely used order proposed to solve this problem is Leslie
 Lamport's happens-before relation~\cite{lamport1978}, or (potentially)
 causality relation because it tracks (potential) causality between
-events.
+events, it is defined as follows:
+\begin{definition}[Happens-Before]
+  We say event $e$ happens before $e'$, written as $e \sqsubset e'$,
+  if and only if one of the followings is true:
+  \begin{enumerate}
+  \item $e$ and $e'$ occur on the same process and $e$ takes place before $e'$.
+  \item $e$ is a sending event and $e'$ is the correspoinding receiving event.
+  \item $e \sqsubset e''$ and $e'' \sqsubset e'$ for any event $e''$.
+  \end{enumerate}
+\end{definition}
+$\sqsubset$ xestablishes a strict partial order
 
 \section{System Model}
 We model a distributed system as consisting of a fixed number of
