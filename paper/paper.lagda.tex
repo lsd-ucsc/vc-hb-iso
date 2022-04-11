@@ -54,14 +54,17 @@ open import Relation.Nullary using (¬_; yes; no)
 
 \begin{abstract}
   Vector clocks are widely used in distributed systems to track
-  causality among events because they precisely characterize the
-  happens-before relation. Depite the popular usage, there is rarely
-  any formal proof of its correctness. In this paper, we present a
-  formal proof in Agda that shows the isomorphism between vector
-  clocks and the happens-before relation. To do so, we first define a
-  model of distributed systems that allows us to reason about the
-  happens-before relation; then we define how to assign vector clocks
-  to events in this model; finally we present the isomorphism proof.
+  causality among events because they characterize the happens-before
+  relation, i.e., one event happens before another if and only if its
+  vector clock is less than the other. Despite the popular usage,
+  there is rarely any formal proof of its correctness. In this paper,
+  we present a formal proof in the proof assistant Agda that shows the
+  correspondence between vector clocks and the happens-before
+  relation. To do so, we first define a model of distributed systems
+  based on history-carrying events, this allows us to define and
+  reason about the happens-before relation intuitively; then we define
+  how to assign vector clocks to events in this model; finally we
+  present the correspondence proof.
 \end{abstract}
 
 \begin{document}
