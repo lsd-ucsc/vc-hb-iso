@@ -18,7 +18,7 @@ open import Data.Sum using (_⊎_;inj₁;inj₂)
 open import Function using (const)
 open import Relation.Binary
 open import Relation.Binary.HeterogeneousEquality using (refl;_≅_;_≇_;≅-to-≡) renaming(cong to hetero-cong;subst to hetero-subst)
-open import Relation.Binary.PropositionalEquality using (refl;_≡_;subst;sym;cong;cong-app;_≢_)
+open import Relation.Binary.PropositionalEquality as Eq using (refl;_≡_;subst;sym;cong;cong-app;_≢_)
 open import Relation.Nullary using (¬_;_because_;ofⁿ;ofʸ;yes;no)
 
 open VectorEq (DecSetoid.setoid  NatProp.≡-decSetoid)
@@ -149,44 +149,44 @@ pid≢i⇒vc[init]i≡0 {pid} i i≢pid = updateAt-minimal i pid (replicate 0) i
 
 -- other lemmas about vc[_]
 
-index-⊏-preserving :  ∀ {pid pid′ eid eid′} {e : Event pid eid} {e′ : Event pid′ eid′} →
-                      e ⊏ e′ →  vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
-index-⊏-preserving {e = e} {e′ = send m e}  processOrder₁      = vc[e]pid<vc[send[e]]pid e m
-index-⊏-preserving {e = e} {e′ = recv e′ e} processOrder₂      = vc[e′]pid<vc[recv[e,e′]]pid e′ e
-index-⊏-preserving {e = e} {e′ = recv e e′} send⊏recv          = vc[e]pid<vc[recv[e,e′]]pid e e′
-index-⊏-preserving (trans {_} {_} {_} {_} {_} {_} {pid″} x y)  = <-transʳ (proj₁ (⊏-preserving x) pid″) (index-⊏-preserving y)
+⊏-preserving-index : e ⊏ e′ →  vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
+⊏-preserving-index {e = e} {e′ = send m e}  processOrder₁       = vc[e]pid<vc[send[e]]pid e m
+⊏-preserving-index {e = e} {e′ = recv e′ e} processOrder₂      = vc[e′]pid<vc[recv[e,e′]]pid e′ e
+⊏-preserving-index {e = e} {e′ = recv e e′} send⊏recv          = vc[e]pid<vc[recv[e,e′]]pid e e′
+⊏-preserving-index (trans {_} {_} {_} {_} {_} {_} {pid″} x y)  = <-transʳ ((proj₁ (⊏-preserving x)  pid″)) (⊏-preserving-index y)
 
-index-⊏-determining :  ∀ {pid pid′ eid eid′} {e : Event pid eid} {e′ : Event pid′ eid′} →
-                       pid[ e ] ≢ pid[ e′ ] → vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] → e ⊏ e′
-index-⊏-determining {e = e} e′@{e′ = init} x y = ⊥-elim (≤⇒≯ y (subst ( vc[ e ] pid[ e ] >_) z (0<vc[e]pid[e] {e = e})))
-  where
-   z : 0 ≡ vc[ e′ ] pid[ e ]
-   z = sym (updateAt-minimal pid[ e ] pid[ e′ ] (replicate 0) x)
-index-⊏-determining {e = e} {e′ = send m e″} x y = trans (index-⊏-determining x (subst (vc[ e ] pid[ e ] ≤_) z y)) processOrder₁
-  where
-   z : vc[ send m e″ ] pid[ e ] ≡ vc[ e″ ] pid[ e ]
-   z = updateAt-minimal pid[ e ] pid[ e″ ] vc[ e″ ] x
-index-⊏-determining {e = e} {e′ = recv e″ e‴} x y
-  with z ← subst ( vc[ e ] pid[ e ] ≤_ ) (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e‴ pid[ e ] x)) y -- vc[ e ] pid[ e ] ≤ vc[ e″ ] pid[ e ] ⊔ vc[ e‴ ] pid[ e ]
-  with vc[ e″ ] pid[ e ] ≤? vc[ e‴ ] pid[ e ]
-...| yes w
-     with u ← subst ( vc[ e ] pid[ e ] ≤_ ) (m≤n⇒m⊔n≡n w) z -- vc[ e ] pid[ e ] ≤ vc[ e‴ ] pid[ e ] 
-     = trans (index-⊏-determining x u) processOrder₂
-...| no w
-     with u ← subst ( vc[ e ] pid[ e ] ≤_ ) (m≥n⇒m⊔n≡m (<⇒≤ (≰⇒> w))) z -- vc[ e ] pid[ e ] ≤ vc[ e″ ] pid[ e ]  
-     with pid[ e ] Fin.≟ pid[ e″ ]
-...   | no v = trans (index-⊏-determining v u) send⊏recv
-...   | yes refl with ⊏-tri-locally {e = e} {e′ = e″} refl 
-...            | inj₁ v           = trans v send⊏recv
-...            | inj₂ (inj₁ refl) = send⊏recv
-...            | inj₂ (inj₂ v)    = ⊥-elim (<⇒≱ (index-⊏-preserving v) u)
+_≺⁻_ : Event pid eid → Event pid′ eid′ → Set
+_≺⁻_  e e′ = vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] × e ≇ e′
 
-clock-⊏-determining :  ∀ {pid pid′ eid eid′} {e : Event pid eid} {e′ : Event pid′ eid′} →
-                       vc[ e ] ≺ vc[ e′ ] → e ⊏ e′
-clock-⊏-determining {e = e} {e′ = e′} z@(∀≤ , pid , p<p) with pid[ e ] Fin.≟ pid[ e′ ]
-... | no pid≢ = index-⊏-determining pid≢ (∀≤ _)
-... | yes pid≡ with ⊏-tri-locally {e = e} {e′ = e′} pid≡
-...             | inj₁ x = x
-...             | inj₂ (inj₁ refl) = ⊥-elim (1+n≰n p<p)
-...             | inj₂ (inj₂ x) = ⊥-elim (≺-irrefl (≺-trans z (⊏-preserving x)))
+≺⁻-irrefl : ¬ e ≺⁻ e
+≺⁻-irrefl (_ , x) = x refl
 
+≺⇒≺⁻ : vc[ e ] ≺ vc[ e′ ] → e ≺⁻ e′
+≺⇒≺⁻ {e = e} (∀≤ , p , p<) = (∀≤ pid[ e ]) , λ{refl → <⇒≢ p< refl}
+
+⊏̸⇒¬≺⁻ : e ⊏̸ e′ → ¬ (e ≺⁻ e′)
+⊏̸⇒¬≺⁻ (⊏̸-eid {e = e} {e′ = e′} x y) (z , w) with m≤n⇒m<n∨m≡n y
+... | inj₁ u = <⇒≱ (⊏-preserving-index {e = e′} {e′ = e} (eid<⇒⊏-locally (sym x) u )) z
+... | inj₂ u = w (uniquely-identify x (sym u))
+⊏̸⇒¬≺⁻ (⊏̸-init {e = e} x refl) (z , _) = <⇒≱ ((0<vc[e]pid[e] {e = e})) (subst ( vc[ e ] pid[ e ] ≤_) ((pid≢i⇒vc[init]i≡0 pid[ e ] x)) z)
+⊏̸⇒¬≺⁻ (⊏̸-send {e = e} {e′ = e′} {m = m} x y) (z , _) = ⊏̸⇒¬≺⁻ y (u , (λ {refl → x refl}))
+ where
+   u : vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ]
+   u = subst (vc[ e ] pid[ e ] ≤_) (pid≢i⇒vc[send[e]]i≡vc[e]i e′ m pid[ e ] x) z
+⊏̸⇒¬≺⁻ (⊏̸-recv  {e = e} {e′ = e′} {e″ = e″} x y z w) (u , _)
+   with vc[ e″ ] pid[ e ] <? vc[ e′ ] pid[ e ]
+... | yes v = ⊏̸⇒¬≺⁻ y ((subst (vc[ e ] pid[ e ] ≤_) s u) , (λ {refl → x refl}))
+ where
+  s : vc[ recv e″ e′ ] pid[ e ] ≡ vc[ e′ ] pid[ e ]
+  s = Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x)) (m≤n⇒m⊔n≡n (<⇒≤ v))
+... | no  v  with ≅-dec {e = e} {e′ = e″}
+...           | inj₁ t = w t
+...           | inj₂ t = ⊏̸⇒¬≺⁻ z ((subst (vc[ e ] pid[ e ] ≤_) s u) , t)
+ where
+  s : vc[ recv e″ e′ ] pid[ e ] ≡ vc[ e″ ] pid[ e ]
+  s = Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x)) (m≥n⇒m⊔n≡m (≮⇒≥ v))
+
+⊏-reflecting : vc[ e ] ≺ vc[ e′ ] → e ⊏ e′
+⊏-reflecting {e = e} {e′ = e′} x with ⊏-dec {e = e} {e′ = e′}
+... | inj₁ z = z
+... | inj₂ z = ⊥-elim ((⊏̸⇒¬≺⁻ (¬⇒⊏̸ z)) (≺⇒≺⁻ x))
