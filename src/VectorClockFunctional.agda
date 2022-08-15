@@ -44,7 +44,7 @@ private
  -- converting from Event to VC
 
 vc[_] : Event pid eid → VC
-vc[_] {pid} init        = updateAt pid (const 1) (replicate 0)
+vc[_] {pid} init        = updateAt pid suc (replicate 0)
 vc[_] {pid} (send _ e)  = updateAt pid suc vc[ e ]
 vc[_] {pid} (recv e e′) = updateAt pid suc (zipWith _⊔_ vc[ e ] vc[ e′ ])
 
