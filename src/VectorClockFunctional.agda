@@ -46,7 +46,7 @@ private
 vc[_] : Event pid eid → VC
 vc[_] {pid} init        = updateAt pid suc (replicate 0)
 vc[_] {pid} (send _ e)  = updateAt pid suc vc[ e ]
-vc[_] {pid} (recv e e′) = updateAt pid suc (zipWith _⊔_ vc[ e ] vc[ e′ ])
+vc[_] {pid} (recv e′ e) = updateAt pid suc (zipWith _⊔_ vc[ e′ ] vc[ e ])
 
  -- lemmas about _≤_
  
@@ -134,39 +134,38 @@ merge-others-indexˡ-≡ {e = e} {e′ = e′} {e″ = e″} x y =  Eq.trans (sy
 0<vc[e]pid[e] : 0 < vc[ e ] pid[ e ]
 0<vc[e]pid[e] {pid} e@{e = init}    = subst (0 <_) (sym init-self-index-≡) (s≤s z≤n)
 0<vc[e]pid[e] {pid} {e = send x e}  = subst (0 <_) (sym (updateAt-updates pid vc[ e ])) (<-trans (0<vc[e]pid[e]{e = e}) (s≤s ≤-refl))
-0<vc[e]pid[e] {pid} {e = recv e e′} = <-trans (<-transˡ (0<vc[e]pid[e] {e = e′}) (zip⊔-monotonicʳ vc[ e′ ] vc[ e ] pid)) (join-self-index-< e e′)
+0<vc[e]pid[e] {pid} {e = recv e′ e} = <-trans (<-transˡ (0<vc[e]pid[e] {e = e}) (zip⊔-monotonicʳ vc[ e ] vc[ e′ ] pid)) (join-self-index-< e′ e)
 
 -- main theorems
 
-⊏-preserving : ∀ {pid pid′ eid eid′} {e : Event pid eid} {e′ : Event pid′ eid′}
-               → e ⊏ e′ →  vc[ e ] ≺ vc[ e′ ]
-⊏-preserving {e = e} {e′ = send m e} processOrder₁ = lemma , pid[ e ] , send-self-index-< e m
+≺-preserves-⊏ : e ⊏ e′ →  vc[ e ] ≺ vc[ e′ ]
+≺-preserves-⊏ {e = e} {e′ = send m e} processOrder₁ = lemma , pid[ e ] , send-self-index-< e m
   where
    lemma : Pointwise _≤_ vc[ e ] vc[ send m e ]
    lemma i with i Fin.≟ pid[ e ]
    ... | yes x rewrite x  = <⇒≤ (send-self-index-< e m)
    ... | no x rewrite send-others-index-≡ e m i x = ≤-refl 
-⊏-preserving {e = e} {e′ = recv e″ e} processOrder₂ = lemma , pid[ e ] , (recv-self-index-< e″ e)
+≺-preserves-⊏ {e = e} {e′ = recv e″ e} processOrder₂ = lemma , pid[ e ] , (recv-self-index-< e″ e)
   where
    lemma : Pointwise _≤_ vc[ e ] vc[ recv e″ e ]
    lemma i with i Fin.≟ pid[ e ]
    ... | yes x rewrite x  = <⇒≤ (recv-self-index-< e″ e ) 
    ... | no x = recv-others-index-≤ʳ e″ e i x
-⊏-preserving {e = e} {e′ = recv e e″} send⊏recv = lemma , pid[ e″ ] , recv-others-index-< e e″
+≺-preserves-⊏ {e = e} {e′ = recv e e″} send⊏recv = lemma , pid[ e″ ] , recv-others-index-< e e″
   where
    lemma : Pointwise _≤_ vc[ e ] vc[ recv e e″ ]
    lemma i with i Fin.≟ pid[ e″ ]
    ... | yes x rewrite x  = <⇒≤ (recv-others-index-< e e″)
    ... | no x = recv-others-index-≤ˡ e e″ i x
-⊏-preserving {e = e} {e′ = e′} (trans x x₁) = ≺-trans (⊏-preserving x) (⊏-preserving x₁)
+≺-preserves-⊏ {e = e} {e′ = e′} (trans x x₁) = ≺-trans (≺-preserves-⊏ x) (≺-preserves-⊏ x₁)
 
 -- other lemmas about vc[_]
 
-⊏-preserving-index : e ⊏ e′ →  vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
-⊏-preserving-index {e = e} {e′ = send m e}  processOrder₁       = send-self-index-< e m
-⊏-preserving-index {e = e} {e′ = recv e′ e} processOrder₂      = recv-self-index-< e′ e
-⊏-preserving-index {e = e} {e′ = recv e e′} send⊏recv          = recv-others-index-< e e′
-⊏-preserving-index (trans {_} {_} {_} {_} {_} {_} {pid″} x y)  = <-transʳ ((proj₁ (⊏-preserving x)  pid″)) (⊏-preserving-index y)
+≺-preserves-⊏-index : e ⊏ e′ →  vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
+≺-preserves-⊏-index {e = e} {e′ = send m e}  processOrder₁       = send-self-index-< e m
+≺-preserves-⊏-index {e = e} {e′ = recv e′ e} processOrder₂      = recv-self-index-< e′ e
+≺-preserves-⊏-index {e = e} {e′ = recv e e′} send⊏recv          = recv-others-index-< e e′
+≺-preserves-⊏-index (trans {_} {_} {_} {_} {_} {_} {pid″} x y)  = <-transʳ ((proj₁ (≺-preserves-⊏ x)  pid″)) (≺-preserves-⊏-index y)
 
 _≺⁻_ : Event pid eid → Event pid′ eid′ → Set
 _≺⁻_  e e′ = vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] × e ≇ e′
@@ -179,7 +178,7 @@ _≺⁻_  e e′ = vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] × e ≇ e′
 
 ⊏̸⇒¬≺⁻ : e ⊏̸ e′ → ¬ (e ≺⁻ e′)
 ⊏̸⇒¬≺⁻ (⊏̸-eid {e = e} {e′ = e′} x y) (z , w) with m≤n⇒m<n∨m≡n y
-... | inj₁ u = <⇒≱ (⊏-preserving-index {e = e′} {e′ = e} (eid<⇒⊏-locally (sym x) u )) z
+... | inj₁ u = <⇒≱ (≺-preserves-⊏-index {e = e′} {e′ = e} (eid<⇒⊏-locally (sym x) u )) z
 ... | inj₂ u = w (uniquely-identify x (sym u))
 ⊏̸⇒¬≺⁻ (⊏̸-init {e = e} x refl) (z , _) = <⇒≱ ((0<vc[e]pid[e] {e = e})) (subst ( vc[ e ] pid[ e ] ≤_) ((init-others-index-≡ pid[ e ] x)) z)
 ⊏̸⇒¬≺⁻ (⊏̸-send {e = e} {e′ = e′} {m = m} x y) (z , _) = ⊏̸⇒¬≺⁻ y (≤-respʳ-≡ ((send-others-index-≡ e′ m pid[ e ] x)) z , (λ {refl → x refl}))
@@ -190,7 +189,7 @@ _≺⁻_  e e′ = vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] × e ≇ e′
 ...           | inj₁ t = w t
 ...           | inj₂ t = ⊏̸⇒¬≺⁻ z ((≤-respʳ-≡ (merge-others-indexˡ-≡ {e = e} {e′ = e′} {e″ = e″} x v) u) , t)
 
-⊏-reflecting : vc[ e ] ≺ vc[ e′ ] → e ⊏ e′
-⊏-reflecting {e = e} {e′ = e′} x with ⊏-dec {e = e} {e′ = e′}
+≺-reflects-⊏ : vc[ e ] ≺ vc[ e′ ] → e ⊏ e′
+≺-reflects-⊏ {e = e} {e′ = e′} x with ⊏-dec {e = e} {e′ = e′}
 ... | inj₁ z = z
 ... | inj₂ z = ⊥-elim ((⊏̸⇒¬≺⁻ (¬⇒⊏̸ z)) (≺⇒≺⁻ x))

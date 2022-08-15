@@ -3,7 +3,7 @@ module TreeClockFunctional where
 open import Postulates
 open import Event
 open import HappensBefore
-open import VectorClockFunctional using (VC; vc[_])
+open import VectorClockFunctional using (VC; vc[_]; _≺_; ≺-preserves-⊏; ≺-reflects-⊏)
 
 open import Data.Bool using (true;false;if_then_else_)
 open import Data.Empty using (⊥-elim)
@@ -55,40 +55,38 @@ updateAClk f tc = record tc {aclk = f (aclk tc)}
 TC : Set
 TC = Vector TCVal n
 
-TC-Clk-to-VC : TC → VC
-TC-Clk-to-VC  tc = map clk tc
+TC-to-VC : TC → VC
+TC-to-VC  tc = map clk tc
 
 mergePrt : ProcessId → ProcessId → ProcessId → TCVal → TCVal → Maybe ProcessId
-mergePrt pid pid′ curPid tc tc′ =
-  if (does (pid′ Fin.≟ curPid))
+mergePrt pid′ pid curPid tc′ tc =
+  if (does (pid Fin.≟ curPid))
   then nothing
-  else (if (does (clk tc′ <? clk tc))
-        then if (does (pid Fin.≟ curPid)) then (just pid′) else prt tc
-        else prt tc′)
+  else (if (does (clk tc <? clk tc′))
+        then (if (does (pid′ Fin.≟ curPid)) then (just pid) else prt tc′)
+        else prt tc)
 
 getNewAClk : ProcessId → ProcessId → ℕ → ℕ → ℕ
 getNewAClk pid curPid clk aclk = if (does (pid Fin.≟ curPid)) then clk else aclk
 
 mergeTCVal : ProcessId → ProcessId → ProcessId → TCVal →  TCVal → TCVal
-mergeTCVal pid pid′ curPid tcv tcv′ =
+mergeTCVal pid′ pid curPid tcv′ tcv =
   record
-     { prt  = mergePrt pid pid′ curPid tcv tcv′
-     ; clk  = (_⊔_ (clk tcv) (clk tcv′))
-     ; aclk = getNewAClk pid curPid (clk tcv) (aclk tcv′)
+     { prt  = mergePrt pid′ pid curPid tcv′ tcv
+     ; clk  = (_⊔_ (clk tcv′) (clk tcv))
+     ; aclk = getNewAClk pid′ curPid (clk tcv) (aclk tcv′)
      }
                       
 zipWith′ : ∀ {n}{A B C : Set} → (Fin n → A → B → C) → Vector A n → Vector B n → Vector C n
 zipWith′ f xs ys i = f i (xs i) (ys i)
 
--- TODO: switch e and e′
-
 tc[_] : Event pid eid → TC
 tc[_] {pid} init        = updateAt pid (updateClk suc) (replicate (p: nothing c: 0 a: 0))
 tc[_] {pid} (send _ e)  = updateAt pid (updateClk suc) tc[ e ]
-tc[_] {pid′}(recv {_} {pid} e e′ ) = updateAt pid′ (updateClk suc) (zipWith′ (mergeTCVal pid pid′) tc[ e ] tc[ e′ ] )
+tc[_] {pid}(recv {_} {pid′} e′ e ) = updateAt pid (updateClk suc) (zipWith′ (mergeTCVal pid′ pid) tc[ e′ ] tc[ e ] )
 
-VC-TC-Clk-Equiv : vc[ e ] ≋ TC-Clk-to-VC tc[ e ]
-VC-TC-Clk-Equiv {pid} {e = init} i with i Fin.≟ pid
+TC-VC-Obs-Equiv : vc[ e ] ≋ TC-to-VC tc[ e ]
+TC-VC-Obs-Equiv {pid} {e = init} i with i Fin.≟ pid
 ... | yes refl
   rewrite updateAt-updates i {f = suc} (replicate 0)
         | updateAt-updates i {f = updateClk suc} (replicate (p: nothing c: 0 a: 0))
@@ -97,25 +95,57 @@ VC-TC-Clk-Equiv {pid} {e = init} i with i Fin.≟ pid
   rewrite updateAt-minimal i pid {f = suc}  (replicate 0) neq
         | updateAt-minimal i pid {f = updateClk suc} (replicate (p: nothing c: 0 a: 0)) neq
   = refl
-VC-TC-Clk-Equiv {pid} {e = send _ e} i with i Fin.≟ pid
+TC-VC-Obs-Equiv {pid} {e = send _ e} i with i Fin.≟ pid
 ... | yes refl
   rewrite updateAt-updates i {f = suc} vc[ e ]
         | updateAt-updates i {f = updateClk suc} tc[ e ]
-  = cong suc (VC-TC-Clk-Equiv {e = e} i)
+  = cong suc (TC-VC-Obs-Equiv {e = e} i)
 ... | no neq
   rewrite updateAt-minimal i pid {f = suc}  vc[ e ] neq
         | updateAt-minimal i pid {f = updateClk suc} tc[ e ] neq
-  = VC-TC-Clk-Equiv {e = e} i
-VC-TC-Clk-Equiv {pid′} {e = recv {_} {pid} e e′} i with i Fin.≟ pid′
+  = TC-VC-Obs-Equiv {e = e} i
+TC-VC-Obs-Equiv {pid} {e = recv {_} {pid′} e′ e} i with i Fin.≟ pid
 ... | yes refl
-  rewrite updateAt-updates i {f = suc} (zipWith _⊔_ vc[ e ] vc[ e′ ])
-        | updateAt-updates i {f = updateClk suc} (zipWith′ (mergeTCVal pid pid′) tc[ e ] tc[ e′ ] )
-        | VC-TC-Clk-Equiv {e = e} i
-        | VC-TC-Clk-Equiv {e = e′} i
+  rewrite updateAt-updates i {f = suc} (zipWith _⊔_ vc[ e′ ] vc[ e ])
+        | updateAt-updates i {f = updateClk suc} (zipWith′ (mergeTCVal pid′ pid) tc[ e′ ] tc[ e ] )
+        | TC-VC-Obs-Equiv {e = e} i
+        | TC-VC-Obs-Equiv {e = e′} i
   = refl
 ... | no neq
-  rewrite updateAt-minimal i pid′ {f = suc} (zipWith _⊔_ vc[ e ] vc[ e′ ]) neq
-        | updateAt-minimal i pid′ {f = updateClk suc} (zipWith′ (mergeTCVal pid pid′) tc[ e ] tc[ e′ ]) neq
-        | VC-TC-Clk-Equiv {e = e} i
-        | VC-TC-Clk-Equiv {e = e′} i
+  rewrite updateAt-minimal i pid {f = suc} (zipWith _⊔_ vc[ e′ ] vc[ e ]) neq
+        | updateAt-minimal i pid {f = updateClk suc} (zipWith′ (mergeTCVal pid′ pid) tc[ e′ ] tc[ e ]) neq
+        | TC-VC-Obs-Equiv {e = e} i
+        | TC-VC-Obs-Equiv {e = e′} i
   = refl
+
+_≺ᵗ_ : TC → TC → Set
+tc ≺ᵗ tc′ = (TC-to-VC tc) ≺ (TC-to-VC tc′)
+
+≺ᵗ⇒≺ : tc[ e ] ≺ᵗ tc[ e′ ] → vc[ e ] ≺ vc[ e′ ]
+≺ᵗ⇒≺ {e = e} {e′ = e′} (H≤ , j , H<) =  H≤′ , (j , H<′)
+  where
+   H≤′ : (i : Fin n) → vc[ e ] i ≤ vc[ e′ ] i
+   H≤′ i rewrite TC-VC-Obs-Equiv {e = e} i
+             | TC-VC-Obs-Equiv {e = e′} i
+       = H≤ i
+   H<′ : vc[ e ] j < vc[ e′ ] j
+   H<′ rewrite TC-VC-Obs-Equiv {e = e} j
+            | TC-VC-Obs-Equiv {e = e′} j
+      = H<
+≺⇒≺ᵗ :  vc[ e ] ≺ vc[ e′ ] → tc[ e ] ≺ᵗ tc[ e′ ]
+≺⇒≺ᵗ {e = e} {e′ = e′} (H≤ , j , H<) =  H≤′ , (j , H<′)
+  where
+   H≤′ : (i : Fin n) → clk (tc[ e ] i) ≤ clk (tc[ e′ ] i)
+   H≤′ i rewrite sym (TC-VC-Obs-Equiv {e = e} i)
+             | sym (TC-VC-Obs-Equiv {e = e′} i)
+       = H≤ i
+   H<′ : clk (tc[ e ] j) < clk (tc[ e′ ] j)
+   H<′ rewrite sym (TC-VC-Obs-Equiv {e = e} j)
+            | sym (TC-VC-Obs-Equiv {e = e′} j)
+      = H<
+      
+≺ᵗ-preserves-⊏ : e ⊏ e′ → tc[ e ] ≺ᵗ tc[ e′ ]
+≺ᵗ-preserves-⊏ {e = e} {e′ = e′} x = ≺⇒≺ᵗ {e = e} {e′ = e′} (≺-preserves-⊏ x)
+
+≺ᵗ-reflects-⊏ : tc[ e ] ≺ᵗ tc[ e′ ] → e ⊏ e′
+≺ᵗ-reflects-⊏ {e = e} {e′ = e′} x = ≺-reflects-⊏ (≺ᵗ⇒≺ {e = e} {e′ = e′} x)
