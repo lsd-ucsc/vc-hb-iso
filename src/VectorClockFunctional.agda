@@ -3,6 +3,7 @@ module VectorClockFunctional where
 open import Postulates
 open import Event
 open import HappensBefore
+
 open import Data.Bool using (true;false)
 open import Data.Empty using (⊥-elim)
 open import Data.Fin as Fin using (Fin)
@@ -16,7 +17,8 @@ open import Data.Vec.Functional.Relation.Binary.Pointwise
 import Data.Vec.Functional.Relation.Binary.Pointwise.Properties as Pointwiseₚ
 open import Data.Sum using (_⊎_;inj₁;inj₂)
 open import Function using (const)
-open import Relation.Binary
+open import Relation.Binary using (DecSetoid)
+open import Relation.Binary.Definitions using (_Respectsʳ_)
 open import Relation.Binary.HeterogeneousEquality using (refl;_≅_;_≇_;≅-to-≡) renaming(cong to hetero-cong;subst to hetero-subst)
 open import Relation.Binary.PropositionalEquality as Eq using (refl;_≡_;subst;sym;cong;cong-app;_≢_)
 open import Relation.Nullary using (¬_;_because_;ofⁿ;ofʸ;yes;no)
@@ -45,6 +47,11 @@ vc[_] : Event pid eid → VC
 vc[_] {pid} init        = updateAt pid (const 1) (replicate 0)
 vc[_] {pid} (send _ e)  = updateAt pid suc vc[ e ]
 vc[_] {pid} (recv e e′) = updateAt pid suc (zipWith _⊔_ vc[ e ] vc[ e′ ])
+
+ -- lemmas about _≤_
+ 
+≤-respʳ-≡ : _≤_ Respectsʳ _≡_
+≤-respʳ-≡ = subst (_ ≤_)
 
  -- lemmas about Vector functions
 
@@ -82,77 +89,83 @@ vc-≺⇒≇ (_ , pid , vc[pid]<vc′[pid] ) vc≅vc′ = vc[p]-<⇒≇ pid vc[p
 
  -- lemmas about vc[_]
 
-vc[e]pid⊔bv[e′]pid<vc[recv[e,e′]]pid : ∀ {pid pid′ eid eid′} (e : Event pid eid) (e′ : Event pid′ eid′)
+join-self-index-< : ∀ {pid pid′ eid eid′} (e : Event pid eid) (e′ : Event pid′ eid′)
                                        → vc[ e ] pid[ e′ ] ⊔ vc[ e′ ] pid[ e′ ] < vc[ recv e e′ ] pid[ e′ ]
-vc[e]pid⊔bv[e′]pid<vc[recv[e,e′]]pid e e′ = subst (vc[ e ] pid[ e′ ] ⊔ vc[ e′ ] pid[ e′ ] <_) (updateAt-updates-suc pid[ e′ ]) ≤-refl
+join-self-index-< e e′ = ≤-respʳ-≡ (updateAt-updates-suc pid[ e′ ]) ≤-refl
 
-vc[e]pid<vc[recv[e,e′]]pid : ∀ {pid pid′ eid eid′} (e : Event pid eid) (e′ : Event pid′ eid′)
+recv-others-index-< : ∀ {pid pid′ eid eid′} (e : Event pid eid) (e′ : Event pid′ eid′)
                              → vc[ e ] pid[ e′ ] < vc[ recv e e′ ] pid[ e′ ]
-vc[e]pid<vc[recv[e,e′]]pid e e′ = <-transʳ (zip⊔-monotonicˡ vc[ e′ ] vc[ e ] pid[ e′ ]) (vc[e]pid⊔bv[e′]pid<vc[recv[e,e′]]pid e e′)
+recv-others-index-< e e′ = <-transʳ (zip⊔-monotonicˡ vc[ e′ ] vc[ e ] pid[ e′ ]) (join-self-index-< e e′)
 
-vc[e′]pid<vc[recv[e,e′]]pid : ∀ {pid pid′ eid eid′} (e : Event pid eid) (e′ : Event pid′ eid′)
+recv-self-index-< : ∀ {pid pid′ eid eid′} (e : Event pid eid) (e′ : Event pid′ eid′)
                               → vc[ e′ ] pid[ e′ ] < vc[ recv e e′ ] pid[ e′ ]
-vc[e′]pid<vc[recv[e,e′]]pid e e′ = <-transʳ (zip⊔-monotonicʳ vc[ e′ ] vc[ e ]  pid[ e′ ]) (vc[e]pid⊔bv[e′]pid<vc[recv[e,e′]]pid e e′)
+recv-self-index-< e e′ = <-transʳ (zip⊔-monotonicʳ vc[ e′ ] vc[ e ]  pid[ e′ ]) (join-self-index-< e e′)
 
-vc[e]pid<vc[send[e]]pid : ∀ {pid eid} (e : Event pid eid) m
+send-self-index-< : ∀ {pid eid} (e : Event pid eid) m
                           → vc[ e ] pid[ e ] < vc[ send m e ] pid[ e ] 
-vc[e]pid<vc[send[e]]pid e _ = subst (vc[ e ] pid[ e ] <_) (updateAt-updates-suc pid[ e ]) ≤-refl
+send-self-index-< e _ = ≤-respʳ-≡ (updateAt-updates-suc pid[ e ]) ≤-refl
 
-vc[init]pid≡1 : ∀ {pid} → vc[ init {pid} ] pid ≡ 1
-vc[init]pid≡1 {pid} = updateAt-updates pid (replicate 0)
+init-self-index-≡ : ∀ {pid} → vc[ init {pid} ] pid ≡ 1
+init-self-index-≡ {pid} = updateAt-updates pid (replicate 0)
 
-pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i : ∀ {pid pid′ eid eid′} (e : Event pid eid) (e′ : Event pid′ eid′) i
-                                      → i ≢ pid[ e′ ] →  (zipWith _⊔_ vc[ e ] vc[ e′ ]) i ≡ vc[ recv e e′ ] i
-pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e e′ i i≢pid = sym (updateAt-minimal i pid[ e′ ] (zipWith _⊔_ vc[ e ] vc[ e′ ]) i≢pid)
-
-pid≢i⇒vc[e′]i≤vc[recv[e,e′]]i : ∀ {pid pid′ eid eid′}(e : Event pid eid) (e′ : Event pid′ eid′) i
+recv-others-index : ∀ {pid pid′ eid eid′} (e : Event pid eid) (e′ : Event pid′ eid′) i  → i ≢ pid[ e′ ] →  (zipWith _⊔_ vc[ e ] vc[ e′ ]) i ≡ vc[ recv e e′ ] i
+recv-others-index e e′ i i≢pid = sym (updateAt-minimal i pid[ e′ ] (zipWith _⊔_ vc[ e ] vc[ e′ ]) i≢pid)
+recv-others-index-≤ʳ : ∀ {pid pid′ eid eid′}(e : Event pid eid) (e′ : Event pid′ eid′) i
                                 → i ≢ pid[ e′ ] → vc[ e′ ] i ≤ vc[ recv e e′ ] i
-pid≢i⇒vc[e′]i≤vc[recv[e,e′]]i e e′ i i≢pid = subst ( vc[ e′ ] i ≤_) (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e e′ i i≢pid ) (zip⊔-monotonicʳ vc[ e′ ] vc[ e ] i)
+recv-others-index-≤ʳ e e′ i i≢pid = ≤-respʳ-≡ (recv-others-index e e′ i i≢pid ) (zip⊔-monotonicʳ vc[ e′ ] vc[ e ] i)
 
-pid≢i⇒vc[e]i≤vc[recv[e,e′]]i : ∀ {pid pid′ eid eid′}(e : Event pid eid) (e′ : Event pid′ eid′) i
+recv-others-index-≤ˡ : ∀ {pid pid′ eid eid′}(e : Event pid eid) (e′ : Event pid′ eid′) i
                                → i ≢ pid[ e′ ] → vc[ e ] i ≤ vc[ recv e e′ ] i
-pid≢i⇒vc[e]i≤vc[recv[e,e′]]i e e′ i i≢pid = subst (vc[ e ] i ≤_) (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e e′ i i≢pid) ((zip⊔-monotonicˡ vc[ e′ ] vc[ e ] i))
+recv-others-index-≤ˡ e e′ i i≢pid = ≤-respʳ-≡ (recv-others-index e e′ i i≢pid) ((zip⊔-monotonicˡ vc[ e′ ] vc[ e ] i))
 
-pid≢i⇒vc[send[e]]i≡vc[e]i : ∀{pid eid } (e : Event pid eid) m i
+send-others-index-≡ : ∀{pid eid } (e : Event pid eid) m i
                             → i ≢ pid[ e ] → vc[ send m e ] i ≡ vc[ e ] i
-pid≢i⇒vc[send[e]]i≡vc[e]i e _ i i≢pid = updateAt-minimal i pid[ e ] vc[ e ] i≢pid
+send-others-index-≡ e _ i i≢pid = updateAt-minimal i pid[ e ] vc[ e ] i≢pid
 
-pid≢i⇒vc[init]i≡0 : ∀ {pid} i → i ≢ pid → vc[ init {pid} ] i ≡ 0
-pid≢i⇒vc[init]i≡0 {pid} i i≢pid = updateAt-minimal i pid (replicate 0) i≢pid
+init-others-index-≡ : ∀ {pid} i → i ≢ pid → vc[ init {pid} ] i ≡ 0
+init-others-index-≡ {pid} i i≢pid = updateAt-minimal i pid (replicate 0) i≢pid
+
+merge-others-indexʳ-≡ : pid[ e ] ≢ pid[ e′ ] → vc[ e″ ] pid[ e ] < vc[ e′ ] pid[ e ] → vc[ recv e″ e′ ] pid[ e ] ≡ vc[ e′ ] pid[ e ]
+merge-others-indexʳ-≡ {e = e} {e′ = e′} {e″ = e″} x y = Eq.trans (sym (recv-others-index e″ e′ pid[ e ] x)) (m≤n⇒m⊔n≡n (<⇒≤ y))
+
+merge-others-indexˡ-≡ : pid[ e ] ≢ pid[ e′ ] → ¬ (vc[ e″ ] pid[ e ] < vc[ e′ ] pid[ e ]) → vc[ recv e″ e′ ] pid[ e ] ≡ vc[ e″ ] pid[ e ]
+merge-others-indexˡ-≡ {e = e} {e′ = e′} {e″ = e″} x y =  Eq.trans (sym (recv-others-index e″ e′ pid[ e ] x)) (m≥n⇒m⊔n≡m (≮⇒≥ y))
 
 0<vc[e]pid[e] : 0 < vc[ e ] pid[ e ]
-0<vc[e]pid[e] {pid} e@{e = init}    = subst (0 <_) (sym vc[init]pid≡1) (s≤s z≤n)
+0<vc[e]pid[e] {pid} e@{e = init}    = subst (0 <_) (sym init-self-index-≡) (s≤s z≤n)
 0<vc[e]pid[e] {pid} {e = send x e}  = subst (0 <_) (sym (updateAt-updates pid vc[ e ])) (<-trans (0<vc[e]pid[e]{e = e}) (s≤s ≤-refl))
-0<vc[e]pid[e] {pid} {e = recv e e′} = <-trans (<-transˡ (0<vc[e]pid[e] {e = e′}) (zip⊔-monotonicʳ vc[ e′ ] vc[ e ] pid)) (vc[e]pid⊔bv[e′]pid<vc[recv[e,e′]]pid e e′)
+0<vc[e]pid[e] {pid} {e = recv e e′} = <-trans (<-transˡ (0<vc[e]pid[e] {e = e′}) (zip⊔-monotonicʳ vc[ e′ ] vc[ e ] pid)) (join-self-index-< e e′)
+
+-- main theorems
 
 ⊏-preserving : ∀ {pid pid′ eid eid′} {e : Event pid eid} {e′ : Event pid′ eid′}
                → e ⊏ e′ →  vc[ e ] ≺ vc[ e′ ]
-⊏-preserving {e = e} {e′ = send m e} processOrder₁ = lemma , pid[ e ] , vc[e]pid<vc[send[e]]pid e m
+⊏-preserving {e = e} {e′ = send m e} processOrder₁ = lemma , pid[ e ] , send-self-index-< e m
   where
    lemma : Pointwise _≤_ vc[ e ] vc[ send m e ]
    lemma i with i Fin.≟ pid[ e ]
-   ... | yes x rewrite x  = <⇒≤ (vc[e]pid<vc[send[e]]pid e m)
-   ... | no x rewrite pid≢i⇒vc[send[e]]i≡vc[e]i e m i x = ≤-refl 
-⊏-preserving {e = e} {e′ = recv e″ e} processOrder₂ = lemma , pid[ e ] , (vc[e′]pid<vc[recv[e,e′]]pid e″ e)
+   ... | yes x rewrite x  = <⇒≤ (send-self-index-< e m)
+   ... | no x rewrite send-others-index-≡ e m i x = ≤-refl 
+⊏-preserving {e = e} {e′ = recv e″ e} processOrder₂ = lemma , pid[ e ] , (recv-self-index-< e″ e)
   where
    lemma : Pointwise _≤_ vc[ e ] vc[ recv e″ e ]
    lemma i with i Fin.≟ pid[ e ]
-   ... | yes x rewrite x  = <⇒≤ (vc[e′]pid<vc[recv[e,e′]]pid e″ e ) 
-   ... | no x = pid≢i⇒vc[e′]i≤vc[recv[e,e′]]i e″ e i x
-⊏-preserving {e = e} {e′ = recv e e″} send⊏recv = lemma , pid[ e″ ] , vc[e]pid<vc[recv[e,e′]]pid e e″
+   ... | yes x rewrite x  = <⇒≤ (recv-self-index-< e″ e ) 
+   ... | no x = recv-others-index-≤ʳ e″ e i x
+⊏-preserving {e = e} {e′ = recv e e″} send⊏recv = lemma , pid[ e″ ] , recv-others-index-< e e″
   where
    lemma : Pointwise _≤_ vc[ e ] vc[ recv e e″ ]
    lemma i with i Fin.≟ pid[ e″ ]
-   ... | yes x rewrite x  = <⇒≤ (vc[e]pid<vc[recv[e,e′]]pid e e″)
-   ... | no x = pid≢i⇒vc[e]i≤vc[recv[e,e′]]i e e″ i x
+   ... | yes x rewrite x  = <⇒≤ (recv-others-index-< e e″)
+   ... | no x = recv-others-index-≤ˡ e e″ i x
 ⊏-preserving {e = e} {e′ = e′} (trans x x₁) = ≺-trans (⊏-preserving x) (⊏-preserving x₁)
 
 -- other lemmas about vc[_]
 
 ⊏-preserving-index : e ⊏ e′ →  vc[ e ] pid[ e′ ] < vc[ e′ ] pid[ e′ ]
-⊏-preserving-index {e = e} {e′ = send m e}  processOrder₁       = vc[e]pid<vc[send[e]]pid e m
-⊏-preserving-index {e = e} {e′ = recv e′ e} processOrder₂      = vc[e′]pid<vc[recv[e,e′]]pid e′ e
-⊏-preserving-index {e = e} {e′ = recv e e′} send⊏recv          = vc[e]pid<vc[recv[e,e′]]pid e e′
+⊏-preserving-index {e = e} {e′ = send m e}  processOrder₁       = send-self-index-< e m
+⊏-preserving-index {e = e} {e′ = recv e′ e} processOrder₂      = recv-self-index-< e′ e
+⊏-preserving-index {e = e} {e′ = recv e e′} send⊏recv          = recv-others-index-< e e′
 ⊏-preserving-index (trans {_} {_} {_} {_} {_} {_} {pid″} x y)  = <-transʳ ((proj₁ (⊏-preserving x)  pid″)) (⊏-preserving-index y)
 
 _≺⁻_ : Event pid eid → Event pid′ eid′ → Set
@@ -168,23 +181,14 @@ _≺⁻_  e e′ = vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ] × e ≇ e′
 ⊏̸⇒¬≺⁻ (⊏̸-eid {e = e} {e′ = e′} x y) (z , w) with m≤n⇒m<n∨m≡n y
 ... | inj₁ u = <⇒≱ (⊏-preserving-index {e = e′} {e′ = e} (eid<⇒⊏-locally (sym x) u )) z
 ... | inj₂ u = w (uniquely-identify x (sym u))
-⊏̸⇒¬≺⁻ (⊏̸-init {e = e} x refl) (z , _) = <⇒≱ ((0<vc[e]pid[e] {e = e})) (subst ( vc[ e ] pid[ e ] ≤_) ((pid≢i⇒vc[init]i≡0 pid[ e ] x)) z)
-⊏̸⇒¬≺⁻ (⊏̸-send {e = e} {e′ = e′} {m = m} x y) (z , _) = ⊏̸⇒¬≺⁻ y (u , (λ {refl → x refl}))
- where
-   u : vc[ e ] pid[ e ] ≤ vc[ e′ ] pid[ e ]
-   u = subst (vc[ e ] pid[ e ] ≤_) (pid≢i⇒vc[send[e]]i≡vc[e]i e′ m pid[ e ] x) z
+⊏̸⇒¬≺⁻ (⊏̸-init {e = e} x refl) (z , _) = <⇒≱ ((0<vc[e]pid[e] {e = e})) (subst ( vc[ e ] pid[ e ] ≤_) ((init-others-index-≡ pid[ e ] x)) z)
+⊏̸⇒¬≺⁻ (⊏̸-send {e = e} {e′ = e′} {m = m} x y) (z , _) = ⊏̸⇒¬≺⁻ y (≤-respʳ-≡ ((send-others-index-≡ e′ m pid[ e ] x)) z , (λ {refl → x refl}))
 ⊏̸⇒¬≺⁻ (⊏̸-recv  {e = e} {e′ = e′} {e″ = e″} x y z w) (u , _)
    with vc[ e″ ] pid[ e ] <? vc[ e′ ] pid[ e ]
-... | yes v = ⊏̸⇒¬≺⁻ y ((subst (vc[ e ] pid[ e ] ≤_) s u) , (λ {refl → x refl}))
- where
-  s : vc[ recv e″ e′ ] pid[ e ] ≡ vc[ e′ ] pid[ e ]
-  s = Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x)) (m≤n⇒m⊔n≡n (<⇒≤ v))
+... | yes v = ⊏̸⇒¬≺⁻ y ((≤-respʳ-≡ (merge-others-indexʳ-≡ {e = e} {e′ = e′} {e″ = e″} x v) u) , (λ {refl → x refl}))
 ... | no  v  with ≅-dec {e = e} {e′ = e″}
 ...           | inj₁ t = w t
-...           | inj₂ t = ⊏̸⇒¬≺⁻ z ((subst (vc[ e ] pid[ e ] ≤_) s u) , t)
- where
-  s : vc[ recv e″ e′ ] pid[ e ] ≡ vc[ e″ ] pid[ e ]
-  s = Eq.trans (sym (pid≢i⇒vc[e]⊔vc[e′]i≡vc[recv[e,e′]]i e″ e′ pid[ e ] x)) (m≥n⇒m⊔n≡m (≮⇒≥ v))
+...           | inj₂ t = ⊏̸⇒¬≺⁻ z ((≤-respʳ-≡ (merge-others-indexˡ-≡ {e = e} {e′ = e′} {e″ = e″} x v) u) , t)
 
 ⊏-reflecting : vc[ e ] ≺ vc[ e′ ] → e ⊏ e′
 ⊏-reflecting {e = e} {e′ = e′} x with ⊏-dec {e = e} {e′ = e′}

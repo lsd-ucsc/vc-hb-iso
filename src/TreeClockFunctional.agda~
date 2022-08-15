@@ -1,0 +1,43 @@
+module TreeClockFunctioinal where
+
+open import Postulates
+open import Event
+open import HappensBefore
+open import Data.Bool using (true;false)
+open import Data.Empty using (⊥-elim)
+open import Data.Fin as Fin using (Fin)
+open import Data.Nat as ℕ
+open import Data.Nat.Properties as NatProp
+open import Data.Product using (_×_; ∃-syntax; _,_;proj₁;proj₂)
+open import Data.Vec.Functional as Vector hiding (init)
+open import Data.Vec.Functional.Properties as VectorProp
+import Data.Vec.Functional.Relation.Binary.Equality.Setoid as VectorEq
+open import Data.Vec.Functional.Relation.Binary.Pointwise
+import Data.Vec.Functional.Relation.Binary.Pointwise.Properties as Pointwiseₚ
+open import Data.Sum using (_⊎_;inj₁;inj₂)
+open import Function using (const)
+open import Relation.Binary
+open import Relation.Binary.HeterogeneousEquality using (refl;_≅_;_≇_;≅-to-≡) renaming(cong to hetero-cong;subst to hetero-subst)
+open import Relation.Binary.PropositionalEquality as Eq using (refl;_≡_;subst;sym;cong;cong-app;_≢_)
+open import Relation.Nullary using (¬_;_because_;ofⁿ;ofʸ;yes;no)
+
+open VectorEq (DecSetoid.setoid  NatProp.≡-decSetoid)
+
+private
+  variable
+    pid pid′ pid″ : ProcessId
+    eid eid′ eid″ : LocalEventId
+    m  : Message
+    e  : Event pid  eid
+    e′ : Event pid′ eid′
+    e″ : Event pid″ eid″
+
+Parent = Fin n
+Clk = ℕ 
+AClk = ℕ
+
+TCVal : Set
+TCVal = Parent × Clk × AClk
+
+TC : Set
+TC = Vector TCVal n

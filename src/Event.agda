@@ -54,5 +54,5 @@ postulate
 ≅-dec : e ≅ e′ ⊎ ¬ e ≅ e′
 ≅-dec {pid} {eid} {_} {pid′} {eid′} {_} with pid Fin.≟ pid′ | eid ≟ eid′
 ... | yes x | yes y = inj₁ (uniquely-identify x y )
-... | yes x | no  y = inj₂ λ { refl → y refl }
+... | _     | no  y = inj₂ λ { refl → y refl }
 ... | no  x | _     = inj₂ λ { refl → x refl }
