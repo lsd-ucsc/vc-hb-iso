@@ -11,21 +11,39 @@
 
 \usepackage{newunicodechar}
 \newunicodechar{ℕ}{\ensuremath{\mathbb{N}}}
+\newunicodechar{⊏}{\ensuremath{\sqsubset}}
+\newunicodechar{⊎}{\ensuremath{\uplus}}
+\newunicodechar{⊔}{\ensuremath{\sqcup}}
+\newunicodechar{≺}{\ensuremath{\prec}}
 
 \usepackage{amsthm}
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}
+\theoremstyle{theorem}
+\newtheorem{throrem}{Throrem}
 
 \usepackage[references]{agda}
 
 \begin{code}[hide]
 module paper where
 
+open import Data.Empty using (⊥-elim)
 open import Data.Fin using (Fin)
-open import Data.Nat using (ℕ)
+open import Data.Nat as ℕ
+open import Data.Nat.Properties as ℕₚ
+open import Data.Sum as Sum using (_⊎_; inj₁; inj₂)
+open import Data.Product using (_×_; _,_; proj₁; proj₂; ∃-syntax)
+open import Data.Vec.Functional as Vector hiding (init)
+open import Data.Vec.Functional.Properties as Vectorₚ
+open import Data.Vec.Functional.Relation.Binary.Pointwise using (Pointwise)
+open import Function using (const)
+open import Relation.Binary using (tri<; tri≈; tri>)
+open import Relation.Binary.HeterogeneousEquality using (_≅_; refl)
+open import Relation.Binary.PropositionalEquality using (_≡_; refl)
+open import Relation.Nullary using (¬_; yes; no)
 \end{code}
 
-\title{Formalizing Vector Clocks in Agda (Functional Pearl)}
+\title{Formalizing Vector Clocks in Agda}
 
 \author{Gan Shen}
 \affiliation{\institution{University of California, Santa Cruz} \country{USA}}
@@ -35,14 +53,18 @@ open import Data.Nat using (ℕ)
 \affiliation{\institution{University of California, Santa Cruz} \country{USA}}
 
 \begin{abstract}
-Distributed systems are hard to build partly because the lack of
-physically synchronous global clocks makes reasoning about causality
-sometimes impossible. To this end, vector logical clocks have been
-proposed and proved to capture causality, in particular, they preserve
-and determin the happens-before relation. However, most of the proofs
-are done informally on paper.
-
-In this paper...
+  Vector clocks are widely used in distributed systems to track
+  causality among events because they characterize the happens-before
+  relation, i.e., one event happens before another if and only if its
+  vector clock is less than the other. Despite the popular usage,
+  there is rarely any formal proof of its correctness. In this paper,
+  we present a formal proof in the proof assistant Agda that shows the
+  correspondence between vector clocks and the happens-before
+  relation. To do so, we first define a model of distributed systems
+  based on history-carrying events, this allows us to define and
+  reason about the happens-before relation intuitively; then we define
+  how to assign vector clocks to events in this model; finally we
+  present the correspondence proof.
 \end{abstract}
 
 \begin{document}
@@ -50,6 +72,30 @@ In this paper...
 \maketitle
 
 \section{Introduction}
+A distributed system is a group of connected computers that are
+programmed to do a specific task; these computers are usually
+spatially separated and communicate only by exchanging messages. By
+having multiple computers located at different places working
+together, it increases system throughput, data locality, as well as
+fault tolerance. However, it also makes reasoning about programs
+harder in that our common persception that events happen in a total
+order no longer hold---events can be concurrent and it is not obvious
+how to order events from different processes.
+
+One widely used order proposed to solve this problem is Leslie
+Lamport's happens-before relation~\cite{lamport1978}, or (potentially)
+causality relation because it tracks (potential) causality between
+events, it is defined as follows:
+\begin{definition}[Happens-Before]
+  We say event $e$ happens before $e'$, written as $e \sqsubset e'$,
+  if and only if one of the followings is true:
+  \begin{enumerate}
+  \item $e$ and $e'$ occur on the same process and $e$ takes place before $e'$.
+  \item $e$ is a sending event and $e'$ is the correspoinding receiving event.
+  \item $e \sqsubset e''$ and $e'' \sqsubset e'$ for any event $e''$.
+  \end{enumerate}
+\end{definition}
+$\sqsubset$ xestablishes a strict partial order
 
 \section{System Model}
 We model a distributed system as consisting of a fixed number of
@@ -68,7 +114,7 @@ and receivings of messages. Similarly, the history of one execution of
 a distributed system can be viewed as an collection of sequences of
 events of each process. We assume each process is assigned an unique
 identifier \AgdaRef{ProcessId}\footnote{Fin n is the Agda type of
-natural numbers less than n.} and each message is assigned a local
+natural numbers less than n.} and each event is assigned a local
 identifier \AgdaRef{LocalEventId} that corresponds to the order it
 takes place on its originating process:
 \begin{code}
@@ -99,17 +145,152 @@ To decide if event $e$ happens before $e'$, one has to position the
 two events into a particular history and see if one of the three
 conditions of happens-before holds.  This requires us to define
 reachable histories, which is traditionally done as a state transition
-system.
+system. Here we present a novel representation of events that carry
+the histories they preceive, what we call history-carrying events, so
+we can avoid the much heavyweight transition system:
+\begin{code}
+data Event : ProcessId → LocalEventId → Set where
+  init  : ∀ {pid} → Event pid zero
+  send  : ∀ {pid} {eid} → Message → Event pid eid → Event pid (suc eid)
+  recv  : ∀ {pid pid′} {eid eid′} → Event pid′ eid′ → Event pid eid → Event pid (suc eid)
+\end{code}
+\noindent \AgdaRef{Event} is indexed by a product of
+\AgdaRef{ProcessId} and \AgdaRef{LocalEventId} as its
+identifier, and has three constructors:
+\begin{enumerate}
+\item \AgdaRef{init} is the initial event of each process.
+\item \AgdaRef{send} takes a message and a local preceding event, then
+  contruct a new event with \AgdaRef{LocalEventId} plus one.
+\item \AgdaRef{recv} takes a sending event and a local preceding
+  event, then construct a new event with \AgdaRef{LocalEventId} plus
+  one.
+\end{enumerate}
 
-\section{Strong Clock Condition}
+\begin{code}[hide]
+{-# INJECTIVE Event #-}
+\end{code}
 
-\subsection{Happens-Before Preserving}
+We define some generalized variables:
+\begin{code}
+variable
+  pid pid′ pid″ : ProcessId
+  eid eid′ eid″ : LocalEventId
+  m  : Message
+  e  : Event pid  eid
+  e′ : Event pid′ eid′
+  e″ : Event pid″ eid″
+\end{code}
 
-\subsection{Happens-Before Determining}
+We define two auxilliary functions to extrac the type-level
+\AgdaRef{ProcessId} and \AgdaRef{LocalEventId} from a \AgdaRef{Event}:
+\begin{code}
+pid[_] : Event pid eid → ProcessId
+pid[_] {pid} {_} _ = pid
+
+eid[_] : Event pid eid → LocalEventId
+eid[_] {_} {eid} _ = eid
+\end{code}
+
+One problem of our representation of events is that we can talk about
+events from seperate executions, to constrain events to be from the
+same exectuion, we postulate:
+\begin{code}
+postulate
+  uniquely-identify : pid[ e ] ≡ pid[ e′ ] → eid[ e ] ≡ eid[ e′ ] → e ≅ e′
+\end{code}
+
+With this tree-like structure, we can easily define the happens-before
+on events as:
+\begin{code}
+data _⊏_ : Event pid eid → Event pid′ eid′ → Set where
+  processOrder₁  : e ⊏ send m e
+  processOrder₂  : e ⊏ recv e′ e
+  send⊏recv      : e ⊏ recv e  e′
+  trans          : e ⊏ e′ → e′ ⊏ e″ → e ⊏ e″
+\end{code}
+
+$\sqsubset$ is a strict partial order, that is, it is irreflexive,
+transitive, and asymmetric:
+\begin{code}
+⊏-irrefl : ¬ e ⊏ e
+⊏-trans : e ⊏ e′ → e′ ⊏ e″ → e ⊏ e″
+⊏-asym : e ⊏ e′ → ¬ e′ ⊏ e
+\end{code}
+
+One useful lemma we use a lot in the following sections is that $\sqsubset$ is trichotomous locally, that is, for any two events $e$ and $e'$ from the same process, either $e$ happens before $e'$, or $e$ and $e'$ are equal, or $e'$ hapeens before $e$:
+\begin{code}
+⊏-tri-locally : pid[ e ] ≡ pid[ e′ ] → e ⊏ e′ ⊎ e ≅ e′ ⊎ e′ ⊏ e
+\end{code}
+
+\section{Vector Clock}
+We define vector clocks as:
+\begin{code}
+VC : Set
+VC = Vector ℕ n
+\end{code}
+
+To compute the vector clock of an event:
+\begin{code}
+vc[_] : Event pid eid → VC
+vc[_] {pid} init        = updateAt pid (const 1) (replicate 0)
+vc[_] {pid} (send _ e)  = updateAt pid suc vc[ e ]
+vc[_] {pid} (recv e e′) = updateAt pid suc (zipWith _⊔_ vc[ e ] vc[ e′ ])
+\end{code}
+
+Vector clock comparison:
+\begin{code}
+_≺_ : VC → VC → Set
+vc ≺ vc′ = Pointwise _≤_ vc vc′ × ∃[ pid ] vc pid < vc′ pid
+\end{code}
+
+Vector clocks captures the happens-before relation:
+\begin{code}
+postulate
+  ⊏-preserving : e ⊏ e′ →  vc[ e ] ≺ vc[ e′ ]
+  ⊏-determining : vc[ e ] ≺ vc[ e′ ] → e ⊏ e′
+\end{code}
 
 \section{Conclusion}
 placeholder~\citep{mattern-vector-time, fidge-vector-time, schmuck-dissertation}
 
 \bibliography{refs}
+
+\appendix
+
+\begin{code}
+size : Event pid eid → ℕ
+size init        = zero
+size (send _ e)  = suc (size e)
+size (recv e e′) = suc (size e + size e′)
+
+⊏⇒size< : e ⊏ e′ → size e < size e′
+⊏⇒size< processOrder₁ = s≤s ≤-refl
+⊏⇒size< processOrder₂ = s≤s (≤-stepsˡ _ ≤-refl)
+⊏⇒size< send⊏recv     = s≤s (≤-stepsʳ _ ≤-refl)
+⊏⇒size< (trans x y)   = ≤-trans (⊏⇒size< x) (<⇒≤ (⊏⇒size< y))
+
+⊏-irrefl x = 1+n≰n (⊏⇒size< x)
+
+⊏-trans = trans
+
+⊏-asym x y = ⊥-elim (⊏-irrefl (⊏-trans x y))
+
+eid<⇒⊏-locally : pid[ e ] ≡ pid[ e′ ] → eid[ e ] < eid[ e′ ] → e ⊏ e′
+eid<⇒⊏-locally {_} {eid} {e} {_} {suc eid′} {send m e′} x y with <-cmp eid eid′
+... | tri< a _ _ = trans (eid<⇒⊏-locally x a) processOrder₁
+... | tri> _ _ c = ⊥-elim (1+n≰n (≤-trans y c))
+... | tri≈ _ b _ with uniquely-identify {e = e} {e′ = e′} x b
+... | refl = processOrder₁
+eid<⇒⊏-locally {_} {eid} {e} {_} {suc eid′} {recv _ e′} x y with <-cmp eid eid′
+... | tri< a _ _ = trans (eid<⇒⊏-locally x a) processOrder₂
+... | tri> _ _ c = ⊥-elim (1+n≰n (≤-trans y c))
+... | tri≈ _ b _ with uniquely-identify {e = e} {e′ = e′} x b
+... | refl = processOrder₂
+
+⊏-tri-locally {pid} {eid} {_} {pid} {eid′} {_} refl with <-cmp eid eid′
+... | tri< a _ _ = inj₁ (eid<⇒⊏-locally refl a)
+... | tri≈ _ b _ = inj₂ (inj₁ (uniquely-identify refl b))
+... | tri> _ _ c = inj₂ (inj₂ (eid<⇒⊏-locally refl c))
+\end{code}
 
 \end{document}
